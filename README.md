@@ -23,6 +23,7 @@ Redisworkcore is an ORM like similar entityframework. And it using StackExchange
 
     static async Task Main(string[] args)
     {
+    
       RedisContextOptions options = new RedisContextOptions
       {
         HostAndPort = "localhost:6379"
@@ -45,4 +46,5 @@ Redisworkcore is an ORM like similar entityframework. And it using StackExchange
         Person person = await context.Persons.Find(26);
         List<Person> persons = await context.Persons.Where(x => x.Id > 0).ToListAsync();
       }
+      
     }
