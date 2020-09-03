@@ -11,9 +11,9 @@
         <PackageVersion>1.0.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Emre Hızlı</Authors>
-        <PackageProjectUrl></PackageProjectUrl>
-        <PackageLicenseUrl></PackageLicenseUrl>
-        <RepositoryUrl></RepositoryUrl>
+        <PackageProjectUrl>https://github.com/hizliemre/redisworkcore</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/hizliemre/redisworkcore/blob/v1/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/hizliemre/redisworkcore</RepositoryUrl>
         <RootNamespace>RedisworkCore</RootNamespace>
     </PropertyGroup>
     
