@@ -1,0 +1,217 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading.Tasks;
+using NRediSearch;
+using Polly;
+using Polly.Retry;
+using RedisworkCore.DataAnnotations;
+using StackExchange.Redis;
+
+namespace RedisworkCore
+{
+	public class GetterSetterWrapper<TRedisset> { }
+
+	public static class GetterHelper
+	{
+		public static Func<TEntity, TProperty> CreateGetter<TEntity, TProperty>(string name) where TEntity : class
+		{
+			ParameterExpression instance = Expression.Parameter(typeof(TEntity), "instance");
+
+			MemberExpression body = Expression.Property(instance, name);
+
+			return Expression.Lambda<Func<TEntity, TProperty>>(body, instance)
+							 .Compile();
+		}
+	}
+
+	public abstract class RedisContext : IDisposable
+	{
+		private readonly RedisContextOptions _options;
+		private ConnectionMultiplexer _redis;
+		internal IDatabase Database;
+		internal readonly List<Rediset> Trackeds = new List<Rediset>();
+		private readonly Dictionary<string, CtorDelegate> _getters = new Dictionary<string, CtorDelegate>();
+		private bool _transactionStarted;
+
+		protected RedisContext(RedisContextOptions options)
+		{
+			_options = options;
+			Connect();
+			SetContext();
+		}
+
+		public async Task BeginTransactionAsync()
+		{
+			if (_transactionStarted) return;
+			_transactionStarted = true;
+			await Database.ExecuteAsync("MULTI");
+		}
+
+		public async Task SaveChangesAsync()
+		{
+			foreach (Rediset set in Trackeds)
+			{
+				await set.Client.DeleteDocumentsAsync(true, set.Deleteds.ToArray());
+				await set.Client.AddDocumentsAsync(new AddOptions
+				{
+					ReplacePolicy = AddOptions.ReplacementPolicy.Full
+				}, set.AddOrUpdateds.ToArray());
+			}
+		}
+
+		public async Task CommitTransactionAsync()
+		{
+			if (_transactionStarted)
+				await Database.ExecuteAsync("EXEC");
+		}
+
+		public async Task RollbackTransaction()
+		{
+			if (_transactionStarted)
+				await Database.ExecuteAsync("DISCARD");
+		}
+
+		public Rediset<T> Set<T>() where T : class
+		{
+			return new Rediset<T>(this);
+		}
+
+		internal static string FindKey(object model)
+		{
+			Type type = model.GetType();
+			var props = type.GetProperties()
+							.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+							.Select(x => new
+							 {
+								 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+										   ?.Order
+							 })
+							.OrderBy(x => x.Order)
+							.ToList();
+			if (!props.Any()) throw new InvalidOperationException($"No redis key for this model {type.Name}");
+			object[] values = props.Select(x => x.Prop.GetValue(model))
+								   .ToArray();
+			return GenerateKey(model.GetType(), values);
+		}
+
+		internal static string GenerateKey(Type type, params object[] keyValues)
+		{
+			string[] keyNames = type.GetProperties()
+									.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+									.Select(x => new
+									 {
+										 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+												   ?.Order
+									 })
+									.OrderBy(x => x.Order)
+									.Select(x => x.Prop.Name)
+									.ToArray();
+
+			if (keyNames.Length != keyValues.Length) throw new InvalidOperationException($"You should enter all keys for type {type.Name}");
+
+			string[] keys = new string[keyNames.Length];
+			for (int i = 0; i < keyNames.Length; i++)
+				keys[i] = $"[{keyNames[i]}]_{keyValues[i]}";
+
+			string key = string.Join('|', keys);
+			return $"{type.FullName}_{key}";
+		}
+
+		private delegate object CtorDelegate(params object[] args);
+
+		private static CtorDelegate CreateConstructor(Type type)
+		{
+			// TODO : ILGenerator ile daha performanslı şekilde yazılacak. (GETTER'lar ayarlanacak get edildiğinde instance oluşacak)
+			Type contextType = typeof(RedisContext);
+			ConstructorInfo constructorInfo = type.GetConstructor(new[] { contextType });
+			if (constructorInfo is null) return null;
+
+			ParameterExpression parameter = Expression.Parameter(typeof(object[]));
+			UnaryExpression ctorParameter = Expression.Convert(Expression.ArrayAccess(parameter, Expression.Constant(0)), contextType);
+			NewExpression body = Expression.New(constructorInfo, ctorParameter);
+			Expression<CtorDelegate> constructor = Expression.Lambda<CtorDelegate>(body, parameter);
+			return constructor.Compile();
+		}
+
+		private void Connect()
+		{
+			RetryPolicy<bool> policy = Policy.HandleResult<bool>(connected => !connected)
+											 .WaitAndRetry(10, r => TimeSpan.FromMilliseconds(100));
+
+			ConfigurationOptions configure = Configure(_options.HostAndPort);
+
+			PolicyResult<bool> result = policy.ExecuteAndCapture(() =>
+			{
+				try
+				{
+					if (_redis?.IsConnecting ?? false) return _redis.IsConnected;
+					_redis = ConnectionMultiplexer.Connect(configure);
+					Database = _redis.GetDatabase();
+					return _redis.IsConnected;
+				}
+				catch
+				{
+					return false;
+				}
+			});
+
+			if (result.Outcome == OutcomeType.Successful && !result.Result)
+				throw new RedisConnectionException(ConnectionFailureType.InternalFailure, $"Redis connection is failed on ${_options.HostAndPort}");
+
+			if (result.Outcome == OutcomeType.Failure)
+				throw result.FinalException.InnerException ?? result.FinalException;
+		}
+
+		private void SetContext()
+		{
+			IEnumerable<PropertyInfo> props = GetType()
+											 .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+											 .Where(x => x.PropertyType.IsClass &&
+														 x.PropertyType.IsGenericType &&
+														 x.PropertyType.GetGenericTypeDefinition() == typeof(Rediset<>));
+
+
+			foreach (PropertyInfo prop in props)
+			{
+				CtorDelegate ctor = CreateConstructor(prop.PropertyType);
+				object instance = ctor(this);
+				prop.SetValue(this, instance);
+			}
+		}
+
+		private static ConfigurationOptions Configure(string hostAndPort)
+		{
+			ConfigurationOptions options = new ConfigurationOptions
+			{
+				EndPoints = { hostAndPort }
+			};
+			return options;
+		}
+
+		private void ReleaseUnmanagedResources()
+		{
+			_redis?.Close();
+			_redis?.Dispose();
+		}
+
+		private void Dispose(bool disposing)
+		{
+			ReleaseUnmanagedResources();
+			if (disposing) _redis?.Dispose();
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		~RedisContext()
+		{
+			Dispose(false);
+		}
+	}
+}

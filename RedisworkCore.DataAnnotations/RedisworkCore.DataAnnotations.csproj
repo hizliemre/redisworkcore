@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>RedisworkCore</Title>
+        <Product>RedisworkCore</Product>
+        <Description>Redisworkcore is an ORM like similar entityframework</Description>
+        <PackageTags>redis,redisearch,nredisearch,entityframework</PackageTags>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
+        <PackageVersion>1.0.0</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Emre Hızlı</Authors>
+        <PackageProjectUrl></PackageProjectUrl>
+        <PackageLicenseUrl></PackageLicenseUrl>
+        <RepositoryUrl></RepositoryUrl>
+        <RootNamespace>RedisworkCore</RootNamespace>
+    </PropertyGroup>
+
+</Project>
