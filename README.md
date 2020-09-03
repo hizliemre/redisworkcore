@@ -48,3 +48,21 @@ Redisworkcore is an ORM like similar entityframework. And it using StackExchange
       }
       
     }
+
+### A simple usage with Microsoft.Extensions.DependencyInjection
+
+    var services = new ServiceCollection();
+    services.AddRedisContext<SimpleContext>(o => o.HostAndPort = "localhost:6379");
+    var provider = services.BuildServiceProvider();
+
+    using (var context = provider.GetService<SimpleContext>())
+    {
+        var person = new Person
+        {
+            Id = 26,
+            Name = "Emre",
+            Lastname = "Hızlı"
+        };
+        context.Persons.Add(person);
+        await context.SaveChangesAsync();
+    }
