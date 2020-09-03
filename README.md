@@ -1,4 +1,3 @@
-
 # RedisworkCore
 
 Redisworkcore is an ORM like similar entityframework. And it using StackExchange.Redis for redis connections, NRediSearch for redis search engine and Polly for retry mechanism.
