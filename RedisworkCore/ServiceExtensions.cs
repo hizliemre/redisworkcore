@@ -14,5 +14,14 @@ namespace RedisworkCore
 			services.AddSingleton(opt);
 			services.AddScoped<T, T2>();
 		}
+
+		public static void AddRedisContext<T>(this IServiceCollection services, Action<RedisContextOptions> options)
+			where T : RedisContext
+		{
+			RedisContextOptions opt = new RedisContextOptions();
+			options(opt);
+			services.AddSingleton(opt);
+			services.AddScoped<T>();
+		}
 	}
 }
