@@ -7,6 +7,20 @@ Redisworkcore is an ORM like similar entityframework. And it using StackExchange
 
 ### A simple usage example
 
+    public class Person
+    {
+        [RedisKey(0)]
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Lastname { get; set; }
+    }
+
+    public class SimpleContext : RedisContext
+    {
+        public Rediset<Person> Persons { get; set; }
+        public SimpleContext(RedisContextOptions options) : base(options) { }
+    }
+
     static async Task Main(string[] args)
     {
       RedisContextOptions options = new RedisContextOptions
