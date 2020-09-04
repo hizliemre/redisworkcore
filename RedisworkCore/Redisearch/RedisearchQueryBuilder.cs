@@ -89,6 +89,21 @@ namespace RedisworkCore.Redisearch
 
 		private static string SerializeMethodCall(MethodCallExpression methodCallEx)
 		{
+			if (methodCallEx.Method.Name == nameof(string.IsNullOrEmpty) && methodCallEx.Arguments[0] is MemberExpression memberEx)
+			{
+				/*
+				  x => string.IsNullOrEmpty(x.Name)
+				*/
+				var firstBinary = Expression.MakeBinary(ExpressionType.Equal, memberEx, Expression.Constant(string.Empty));
+				var secondBinary = Expression.MakeBinary(ExpressionType.Equal, memberEx, Expression.Constant(null, typeof(string)));
+				var orBinary = Expression.MakeBinary(ExpressionType.OrElse, firstBinary, secondBinary);
+
+				ParameterVisitor pVisitor = new ParameterVisitor();
+				pVisitor.Visit(methodCallEx);
+				var lambda = Expression.Lambda(orBinary, pVisitor.Parameter);
+				return SerializeInternal(lambda);
+			}
+
 			if (methodCallEx.Arguments[0] is MemberExpression)
 			{
 				/*
@@ -266,6 +281,13 @@ namespace RedisworkCore.Redisearch
 				return SerializeConstant(constantEx, nodeType);
 			}
 
+			if (memberEx.Expression is null && memberEx.NodeType == ExpressionType.MemberAccess)
+			{
+				var value = Expression.Lambda(memberEx).Compile().DynamicInvoke();
+				ConstantExpression constantEx = Expression.Constant(value);
+				return SerializeConstant(constantEx, nodeType);
+			}
+
 			return $"@{memberEx.Member.Name}";
 		}
 
@@ -273,6 +295,13 @@ namespace RedisworkCore.Redisearch
 		{
 			string left = leftEx is BinaryExpression ? SerializeInternal(leftEx) : SerializeInternal(leftEx, nodeType);
 			string right = rightEx is BinaryExpression ? SerializeInternal(rightEx) : SerializeInternal(rightEx, nodeType);
+			if (rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null)
+			{
+				string temp = left;
+				left = right;
+				right = temp;
+			}
+
 			return nodeType switch
 			{
 				RedisearchNodeType.AndAlso => $"({left} {right})",
@@ -335,6 +364,17 @@ namespace RedisworkCore.Redisearch
 			}
 
 			throw new NotSupportedException();
+		}
+
+		private class ParameterVisitor : ExpressionVisitor
+		{
+			public ParameterExpression Parameter { get; private set; }
+
+			protected override Expression VisitParameter(ParameterExpression node)
+			{
+				Parameter = node;
+				return base.VisitParameter(node);
+			}
 		}
 	}
 }
