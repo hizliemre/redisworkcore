@@ -144,8 +144,6 @@ namespace RedisworkCore
 
 		private void BuildIndex()
 		{
-			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
-			if (indexExist) return;
 			Client.CreateIndex<T>();
 		}
 

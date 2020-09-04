@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection.PortableExecutable;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using RedisworkCore.DataAnnotations;
@@ -28,31 +29,32 @@ namespace RedisworkCore.Playground
 				HostAndPort = "localhost:6379"
 			};
 
-			using (var context = new SimpleContext(options))
-			{
-				var person = new Person
-				{
-					Id = 26,
-					Name = "Emre",
-					Lastname = "Hızlı"
-				};
-				context.Persons.Add(person);
-				await context.SaveChangesAsync();
-			}
-
-			using (var context = new SimpleContext(options))
-			{
-				Person person = await context.Persons.Find(26);
-				List<Person> persons = await context.Persons.Where(x => x.Id > 0).ToListAsync();
-			}
+			// using (var context = new SimpleContext(options))
+			// {
+			// 	var person = new Person
+			// 	{
+			// 		Id = 26,
+			// 		Name = "Emre",
+			// 		Lastname = "Hızlı"
+			// 	};
+			// 	context.Persons.Add(person);
+			//
+			// 	await context.SaveChangesAsync();
+			// }
+			//
+			// using (var context = new SimpleContext(options))
+			// {
+			// 	Person person = await context.Persons.Find(26);
+			// 	List<Person> persons = await context.Persons.Where(x => x.Id > 0).ToListAsync();
+			// }
 
 			#region USING WITH DOTNET IOC
 
 			var services = new ServiceCollection();
-			services.AddRedisContext<SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			services.AddRedisContext<RedisContext,SimpleContext>(o => o.HostAndPort = "localhost:6379");
 			var provider = services.BuildServiceProvider();
-
-			using (var context = provider.GetService<SimpleContext>())
+			
+			using (var context = provider.GetService<RedisContext>())
 			{
 				var person = new Person
 				{
@@ -60,7 +62,7 @@ namespace RedisworkCore.Playground
 					Name = "Emre",
 					Lastname = "Hızlı"
 				};
-				context.Persons.Add(person);
+				context.Set<Person>().Add(person);
 				await context.SaveChangesAsync();
 			}
 
