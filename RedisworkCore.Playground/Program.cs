@@ -15,52 +15,53 @@ namespace RedisworkCore.Playground
 
 	public class SimpleContext : RedisContext
 	{
-		public Rediset<Person> Persons { get; set; }
 		public SimpleContext(RedisContextOptions options) : base(options) { }
+		public Rediset<Person> Persons { get; set; }
 	}
 
-	class Program
+	internal class Program
 	{
-		static async Task Main(string[] args)
+		private static async Task Main(string[] args)
 		{
 			RedisContextOptions options = new RedisContextOptions
 			{
 				HostAndPort = "localhost:6379"
 			};
 
-			using (var context = new SimpleContext(options))
+			using (SimpleContext context = new SimpleContext(options))
 			{
-				var person = new Person
+				await context.BeginTransactionAsync();
+				Person person = new Person
 				{
 					Id = 26,
-					Name = "Emre",
-					Lastname = "Hızlı"
+					Name = "",
+					Lastname = null
 				};
-				context.Persons.Add(person);
+				context.Set<Person>().Add(person);
 				await context.SaveChangesAsync();
+				await context.CommitTransactionAsync();
 			}
 
-			using (var context = new SimpleContext(options))
+			using (SimpleContext context = new SimpleContext(options))
 			{
-				Person person = await context.Persons.Find(26);
-				List<Person> persons = await context.Persons.Where(x => x.Id > 0).ToListAsync();
+				List<Person> persons = await context.Persons.Where(x => x.Name == "").ToListAsync();
 			}
 
 			#region USING WITH DOTNET IOC
 
-			var services = new ServiceCollection();
-			services.AddRedisContext<SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			var provider = services.BuildServiceProvider();
-
-			using (var context = provider.GetService<SimpleContext>())
+			ServiceCollection services = new ServiceCollection();
+			services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			IServiceProvider provider = services.BuildServiceProvider();
+			
+			using (RedisContext context = provider.GetService<RedisContext>())
 			{
-				var person = new Person
+				Person person = new Person
 				{
 					Id = 26,
 					Name = "Emre",
 					Lastname = "Hızlı"
 				};
-				context.Persons.Add(person);
+				context.Set<Person>().Add(person);
 				await context.SaveChangesAsync();
 			}
 

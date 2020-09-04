@@ -22,8 +22,8 @@ namespace RedisworkCore.Redisearch
 		internal static void CreateIndex<T>(this Client client)
 		{
 			PropertyInfo[] props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-											.Where(x => !x.IsDefined(typeof(RedisKeyValueAttribute)))
-											.ToArray();
+			                                .Where(x => !x.IsDefined(typeof(RedisKeyValueAttribute)))
+			                                .ToArray();
 			Schema scheme = new Schema();
 			foreach (PropertyInfo prop in props)
 				if (prop.PropertyType.IsGenericType && (prop.PropertyType.GenericTypeArguments[0] == typeof(string) || prop.PropertyType.GenericTypeArguments[0] is { IsValueType: true }))
@@ -249,10 +249,13 @@ namespace RedisworkCore.Redisearch
 
 		private static string EscapeTokenizedChars(string text, bool reverse)
 		{
+			if (text is null) text = Helpers.NullString;
+			else if (text == string.Empty) text = Helpers.EmptyString;
 			text = text.ToLower();
 			if (reverse) text = text.ReverseString();
-			Regex regex = new Regex(@"[\,\.\<\>\{\}\[\]\""\'\:\;\!\@\#\$\%\^\&\*\(\)\-\+\=\~\s]");
-			return regex.Replace(text, m => $"\\{m}");
+			Regex regex = new Regex(@"[\,\.\<\>\{\}\[\]\""\'\:\;\!\@\#\$\%\^\&\*\(\)\-\+\=\~\s\|]");
+			string escaped = regex.Replace(text, m => $"\\{m}");
+			return escaped;
 		}
 
 		private static string SerializeMember(MemberExpression memberEx, RedisearchNodeType? nodeType = null)
@@ -310,8 +313,8 @@ namespace RedisworkCore.Redisearch
 						case ConstantExpression _:
 						{
 							object value = Expression.Lambda(innerMemberEx)
-													 .Compile()
-													 .DynamicInvoke();
+							                         .Compile()
+							                         .DynamicInvoke();
 							return Expression.Constant(value);
 						}
 					}
@@ -320,8 +323,8 @@ namespace RedisworkCore.Redisearch
 			if (expression is MethodCallExpression methodCallEx)
 			{
 				object value = Expression.Lambda(methodCallEx)
-										 .Compile()
-										 .DynamicInvoke();
+				                         .Compile()
+				                         .DynamicInvoke();
 				return Expression.Constant(value);
 			}
 

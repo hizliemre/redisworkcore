@@ -23,18 +23,18 @@ namespace RedisworkCore
 			MemberExpression body = Expression.Property(instance, name);
 
 			return Expression.Lambda<Func<TEntity, TProperty>>(body, instance)
-							 .Compile();
+			                 .Compile();
 		}
 	}
 
 	public abstract class RedisContext : IDisposable
 	{
+		private readonly Dictionary<string, CtorDelegate> _getters = new Dictionary<string, CtorDelegate>();
 		private readonly RedisContextOptions _options;
+		internal readonly List<Rediset> Trackeds = new List<Rediset>();
 		private ConnectionMultiplexer _redis;
 		internal IDatabase Database;
-		internal readonly List<Rediset> Trackeds = new List<Rediset>();
-		private readonly Dictionary<string, CtorDelegate> _getters = new Dictionary<string, CtorDelegate>();
-		private bool _transactionStarted;
+		public bool TransactionStarted;
 
 		protected RedisContext(RedisContextOptions options)
 		{
@@ -43,10 +43,16 @@ namespace RedisworkCore
 			SetContext();
 		}
 
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		public async Task BeginTransactionAsync()
 		{
-			if (_transactionStarted) return;
-			_transactionStarted = true;
+			if (TransactionStarted) return;
+			TransactionStarted = true;
 			await Database.ExecuteAsync("MULTI");
 		}
 
@@ -64,13 +70,13 @@ namespace RedisworkCore
 
 		public async Task CommitTransactionAsync()
 		{
-			if (_transactionStarted)
+			if (TransactionStarted)
 				await Database.ExecuteAsync("EXEC");
 		}
 
 		public async Task RollbackTransaction()
 		{
-			if (_transactionStarted)
+			if (TransactionStarted)
 				await Database.ExecuteAsync("DISCARD");
 		}
 
@@ -83,32 +89,32 @@ namespace RedisworkCore
 		{
 			Type type = model.GetType();
 			var props = type.GetProperties()
-							.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
-							.Select(x => new
-							 {
-								 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
-										   ?.Order
-							 })
-							.OrderBy(x => x.Order)
-							.ToList();
+			                .Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+			                .Select(x => new
+			                {
+				                Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+				                           ?.Order
+			                })
+			                .OrderBy(x => x.Order)
+			                .ToList();
 			if (!props.Any()) throw new InvalidOperationException($"No redis key for this model {type.Name}");
 			object[] values = props.Select(x => x.Prop.GetValue(model))
-								   .ToArray();
+			                       .ToArray();
 			return GenerateKey(model.GetType(), values);
 		}
 
 		internal static string GenerateKey(Type type, params object[] keyValues)
 		{
 			string[] keyNames = type.GetProperties()
-									.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
-									.Select(x => new
-									 {
-										 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
-												   ?.Order
-									 })
-									.OrderBy(x => x.Order)
-									.Select(x => x.Prop.Name)
-									.ToArray();
+			                        .Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+			                        .Select(x => new
+			                        {
+				                        Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+				                                   ?.Order
+			                        })
+			                        .OrderBy(x => x.Order)
+			                        .Select(x => x.Prop.Name)
+			                        .ToArray();
 
 			if (keyNames.Length != keyValues.Length) throw new InvalidOperationException($"You should enter all keys for type {type.Name}");
 
@@ -120,13 +126,11 @@ namespace RedisworkCore
 			return $"{type.FullName}_{key}";
 		}
 
-		private delegate object CtorDelegate(params object[] args);
-
 		private static CtorDelegate CreateConstructor(Type type)
 		{
 			// TODO : ILGenerator ile daha performanslı şekilde yazılacak. (GETTER'lar ayarlanacak get edildiğinde instance oluşacak)
 			Type contextType = typeof(RedisContext);
-			ConstructorInfo constructorInfo = type.GetConstructor(new[] { contextType });
+			ConstructorInfo constructorInfo = type.GetConstructor(new[] {contextType});
 			if (constructorInfo is null) return null;
 
 			ParameterExpression parameter = Expression.Parameter(typeof(object[]));
@@ -139,7 +143,7 @@ namespace RedisworkCore
 		private void Connect()
 		{
 			RetryPolicy<bool> policy = Policy.HandleResult<bool>(connected => !connected)
-											 .WaitAndRetry(10, r => TimeSpan.FromMilliseconds(100));
+			                                 .WaitAndRetry(10, r => TimeSpan.FromMilliseconds(100));
 
 			ConfigurationOptions configure = Configure(_options.HostAndPort);
 
@@ -168,17 +172,18 @@ namespace RedisworkCore
 		private void SetContext()
 		{
 			IEnumerable<PropertyInfo> props = GetType()
-											 .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-											 .Where(x => x.PropertyType.IsClass &&
-														 x.PropertyType.IsGenericType &&
-														 x.PropertyType.GetGenericTypeDefinition() == typeof(Rediset<>));
+			                                  .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+			                                  .Where(x => x.PropertyType.IsClass &&
+			                                              x.PropertyType.IsGenericType &&
+			                                              x.PropertyType.GetGenericTypeDefinition() == typeof(Rediset<>));
 
 
 			foreach (PropertyInfo prop in props)
 			{
 				CtorDelegate ctor = CreateConstructor(prop.PropertyType);
-				object instance = ctor(this);
+				Rediset instance = (Rediset) ctor(this);
 				prop.SetValue(this, instance);
+				instance.BuildIndex();
 			}
 		}
 
@@ -186,7 +191,7 @@ namespace RedisworkCore
 		{
 			ConfigurationOptions options = new ConfigurationOptions
 			{
-				EndPoints = { hostAndPort }
+				EndPoints = {hostAndPort}
 			};
 			return options;
 		}
@@ -203,15 +208,11 @@ namespace RedisworkCore
 			if (disposing) _redis?.Dispose();
 		}
 
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
 		~RedisContext()
 		{
 			Dispose(false);
 		}
+
+		private delegate object CtorDelegate(params object[] args);
 	}
 }
