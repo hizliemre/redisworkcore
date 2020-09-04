@@ -44,7 +44,8 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				List<Person> persons = await context.Persons.Where(x => string.Empty == x.Name).ToListAsync();
+				List<Person> persons = await context.Persons.Where(x => string.IsNullOrEmpty(x.Lastname)).ToListAsync();
+				// List<Person> persons = await context.Persons.Where(x => x.Name == null).ToListAsync();
 			}
 
 			#region USING WITH DOTNET IOC
