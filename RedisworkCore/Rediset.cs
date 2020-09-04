@@ -14,6 +14,7 @@ namespace RedisworkCore
 		internal readonly List<Document> AddOrUpdateds = new List<Document>();
 		internal readonly List<string> Deleteds = new List<string>();
 		internal Client Client;
+		internal abstract void BuildIndex();
 	}
 
 	public class Rediset<T> : Rediset, IRedisearchQueryable<T>, IRedisearchTake<T>
@@ -30,7 +31,6 @@ namespace RedisworkCore
 		{
 			_context = context;
 			Client = new Client($"{typeof(T).FullName}_idx", _context.Database);
-			BuildIndex();
 			_context.Trackeds.Add(this);
 		}
 
@@ -64,6 +64,11 @@ namespace RedisworkCore
 			return this;
 		}
 
+		public Task<List<T>> ToListAsync()
+		{
+			return Client.ToListAsync<T>(_whereQuery, _sorts, _skip, _take);
+		}
+
 		public Task<List<T>> TakeAsync(int count)
 		{
 			if (count > 1000000)
@@ -81,15 +86,10 @@ namespace RedisworkCore
 			}
 		}
 
-		public Task<List<T>> ToListAsync()
-		{
-			return Client.ToListAsync<T>(_whereQuery, _sorts, _skip, _take);
-		}
-
 		public void Add(params T[] models)
 		{
 			Document[] docs = models.Select(CreateDocument)
-									.ToArray();
+			                        .ToArray();
 			lock (_locker)
 			{
 				AddOrUpdateds.AddRange(docs);
@@ -108,8 +108,8 @@ namespace RedisworkCore
 		public void Delete(params T[] models)
 		{
 			string[] docIds = models.Select(CreateDocument)
-									.Select(x => x.Id)
-									.ToArray();
+			                        .Select(x => x.Id)
+			                        .ToArray();
 			lock (_locker)
 			{
 				Deleteds.AddRange(docIds);
@@ -119,7 +119,7 @@ namespace RedisworkCore
 		public void Update(params T[] models)
 		{
 			Document[] docs = models.Select(CreateDocument)
-									.ToArray();
+			                        .ToArray();
 			lock (_locker)
 			{
 				AddOrUpdateds.AddRange(docs);
@@ -142,8 +142,10 @@ namespace RedisworkCore
 			return Client.Count();
 		}
 
-		private void BuildIndex()
+		internal override void BuildIndex()
 		{
+			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
+			if (indexExist) return;
 			Client.CreateIndex<T>();
 		}
 
