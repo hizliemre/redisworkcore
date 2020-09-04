@@ -1,5 +1,8 @@
 # RedisworkCore
 
+[![NuGet](https://img.shields.io/nuget/v/RedisworkCore?label=core%20nuget)](https://www.nuget.org/packages/RedisworkCore)
+[![NuGet](https://img.shields.io/nuget/v/RedisworkCore.DataAnnotations?label=data-annotations%20nuget)](https://www.nuget.org/packages/RedisworkCore.DataAnnotations)
+
 Redisworkcore is an ORM for redis like similar entityframework. And it using StackExchange.Redis for redis connections, NRediSearch for redis search engine and Polly for retry mechanism.
 
 * Create a context like EntityFramework context.
