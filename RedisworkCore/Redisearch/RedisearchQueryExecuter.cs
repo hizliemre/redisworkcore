@@ -40,35 +40,35 @@ namespace RedisworkCore.Redisearch
 		internal static void SortBy<T>(this Expression<Func<T, object>> propSelector, List<RedisearchSortDescriptor> sorts)
 		{
 			string propName = propSelector.GetPropertyName();
-			sorts.Add(new RedisearchSortDescriptor { Ascending = true, PropertyName = propName });
+			sorts.Add(new RedisearchSortDescriptor {Ascending = true, PropertyName = propName});
 		}
 
 		internal static void SortByDescending<T>(this Expression<Func<T, object>> propSelector, List<RedisearchSortDescriptor> sorts)
 		{
 			string propName = propSelector.GetPropertyName();
-			sorts.Add(new RedisearchSortDescriptor { Ascending = false, PropertyName = propName });
+			sorts.Add(new RedisearchSortDescriptor {Ascending = false, PropertyName = propName});
 		}
 
 		internal static bool Any<T>(this Client client, string whereQuery)
 		{
 			if (string.IsNullOrEmpty(whereQuery)) throw new InvalidOperationException("Filter expression cannot be empty.");
 			return client.Search(new Query(whereQuery))
-						 .Documents
-						 .Any();
+			             .Documents
+			             .Any();
 		}
 
 		internal static bool All<T>(this Client client, string whereQuery)
 		{
 			if (string.IsNullOrEmpty(whereQuery)) throw new InvalidOperationException("Filter expression cannot be empty.");
 			return client.Search(new Query(whereQuery))
-						 .Documents
-						 .Any();
+			             .Documents
+			             .Any();
 		}
 
 		internal static long Count(this Client client)
 		{
 			return client.Search(new Query("*").Limit(0, 1000000))
-						 .TotalResults;
+			             .TotalResults;
 		}
 
 		internal static Task<List<T>> ToListAsync<T>(this Client client, string whereQuery, List<RedisearchSortDescriptor> sorts, int skip, int take)
@@ -90,32 +90,32 @@ namespace RedisworkCore.Redisearch
 			SearchResult queryResult = await client.SearchAsync(query);
 			if (queryResult is null) return new List<T>();
 			return queryResult.Documents.Select(x =>
-							   {
-								   string serialized = JsonConvert.SerializeObject(x.GetProperties());
-								   T deserialized = JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
-								   return deserialized;
-							   })
-							  .ToList();
+			                  {
+				                  string serialized = JsonConvert.SerializeObject(x.GetProperties());
+				                  T deserialized = JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
+				                  return deserialized;
+			                  })
+			                  .ToList();
 		}
 
 		private static async Task<List<T>> ToListWithMultipleSortAsync<T>(this Client client, string whereQuery, int skip, int take, List<RedisearchSortDescriptor> sorts)
 		{
 			PropertyInfo[] props = Helpers.GetModelProperties<T>();
 			SortedField[] sort = sorts.Select(x => new SortedField($"@{x.PropertyName}", x.Ascending ? Order.Ascending : Order.Descending))
-									  .ToArray();
+			                          .ToArray();
 			string[] returnFields = props.Select(x => x.Name).ToArray();
 			AggregationBuilder aggregation = new AggregationBuilder(whereQuery).Load(returnFields)
-																			   .SortBy(sort)
-																			   .Limit(skip, take);
+			                                                                   .SortBy(sort)
+			                                                                   .Limit(skip, take);
 			AggregationResult aggreagate = await client.AggregateAsync(aggregation);
 			IReadOnlyList<Dictionary<string, RedisValue>> aggregationResult = aggreagate.GetResults();
 			return aggregationResult.Select(x =>
-									 {
-										 string serialized = JsonConvert.SerializeObject(x);
-										 T deserialized = JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
-										 return deserialized;
-									 })
-									.ToList();
+			                        {
+				                        string serialized = JsonConvert.SerializeObject(x);
+				                        T deserialized = JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
+				                        return deserialized;
+			                        })
+			                        .ToList();
 		}
 
 		internal static Document CreateDocument<T>(this T model, string key)
@@ -124,6 +124,8 @@ namespace RedisworkCore.Redisearch
 			Document doc = new Document(key);
 			foreach (PropertyInfo prop in props)
 			{
+				object value = prop.GetValue(model) ?? Expression.Lambda(Expression.Default(prop.PropertyType)).Compile().DynamicInvoke();
+
 				if (prop.PropertyType.IsGenericType)
 				{
 					doc.CreateDocumentFromGenericType(prop, model);
@@ -132,18 +134,23 @@ namespace RedisworkCore.Redisearch
 
 				if (prop.PropertyType == typeof(decimal))
 				{
-					doc.Set(prop.Name, (string) prop.GetValue(model));
+					doc.Set(prop.Name, (string) value);
 					continue;
 				}
 
 				if (prop.PropertyType == typeof(string) || prop.PropertyType.IsValueType)
 				{
-					doc.Set(prop.Name, (dynamic) prop.GetValue(model));
+					if (value != null) doc.Set(prop.Name, (dynamic) value);
 					if (prop.PropertyType == typeof(string) && !prop.IsDefined(typeof(RedisKeyValueAttribute)))
 					{
-						doc.Set($"{prop.Name}_tag", ((string) prop.GetValue(model)).TagString());
-						doc.Set($"{prop.Name}_reverse_tag", ((string) prop.GetValue(model)).ReverseString());
-						doc.Set($"{prop.Name}_subset_tag", ((string) prop.GetValue(model)).SubsetString());
+						string sVal = (string) value;
+						
+						if (sVal is null) sVal = Helpers.NullString;
+						else if (sVal == string.Empty) sVal = Helpers.EmptyString;
+						
+						doc.Set($"{prop.Name}_tag", sVal.TagString());
+						doc.Set($"{prop.Name}_reverse_tag", sVal.ReverseString());
+						doc.Set($"{prop.Name}_subset_tag", sVal.SubsetString());
 					}
 
 					continue;

@@ -9,14 +9,16 @@ namespace RedisworkCore
 	public static class Helpers
 	{
 		public const string TagSeperator = "~";
-
+		public const string NullString = "___|null|___";
+		public const string EmptyString = "___|empty|___";
 		public static string TagString(this string text)
 		{
 			return text.ToLower();
 		}
-
+		
 		public static string ReverseString(this string text)
 		{
+			if (text == NullString) return string.Empty;
 			text = text.TagString();
 			char[] charArray = text.ToCharArray();
 			Array.Reverse(charArray);
@@ -25,6 +27,7 @@ namespace RedisworkCore
 
 		public static string SubsetString(this string text)
 		{
+			if (text == NullString) return string.Empty;
 			text = text.TagString();
 			List<string> subsets = new List<string>();
 			for (int i = 2; i < text.Length; i++)
