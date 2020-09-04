@@ -266,6 +266,13 @@ namespace RedisworkCore.Redisearch
 				return SerializeConstant(constantEx, nodeType);
 			}
 
+			if (memberEx.Expression is null && memberEx.NodeType == ExpressionType.MemberAccess)
+			{
+				var value = Expression.Lambda(memberEx).Compile().DynamicInvoke();
+				ConstantExpression constantEx = Expression.Constant(value);
+				return SerializeConstant(constantEx, nodeType);
+			}
+
 			return $"@{memberEx.Member.Name}";
 		}
 
@@ -273,6 +280,12 @@ namespace RedisworkCore.Redisearch
 		{
 			string left = leftEx is BinaryExpression ? SerializeInternal(leftEx) : SerializeInternal(leftEx, nodeType);
 			string right = rightEx is BinaryExpression ? SerializeInternal(rightEx) : SerializeInternal(rightEx, nodeType);
+			if (rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null)
+			{
+				string temp = left;
+				left = right;
+				right = temp;
+			}
 			return nodeType switch
 			{
 				RedisearchNodeType.AndAlso => $"({left} {right})",
