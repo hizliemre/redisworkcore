@@ -34,7 +34,7 @@ namespace RedisworkCore.Playground
 				Person person = new Person
 				{
 					Id = 26,
-					Name = "",
+					Name = "Emre",
 					Lastname = null
 				};
 				context.Set<Person>().Add(person);
@@ -44,27 +44,26 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				List<Person> persons = await context.Persons.Where(x => string.IsNullOrEmpty(x.Lastname)).ToListAsync();
-				// List<Person> persons = await context.Persons.Where(x => x.Name == null).ToListAsync();
+				List<Person> persons = await context.Persons.Where(x => "Emre" == x.Name).ToListAsync();
 			}
 
 			#region USING WITH DOTNET IOC
 
-			// ServiceCollection services = new ServiceCollection();
-			// services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			// IServiceProvider provider = services.BuildServiceProvider();
-			//
-			// using (RedisContext context = provider.GetService<RedisContext>())
-			// {
-			// 	Person person = new Person
-			// 	{
-			// 		Id = 26,
-			// 		Name = "Emre",
-			// 		Lastname = "Hızlı"
-			// 	};
-			// 	context.Set<Person>().Add(person);
-			// 	await context.SaveChangesAsync();
-			// }
+			ServiceCollection services = new ServiceCollection();
+			services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			IServiceProvider provider = services.BuildServiceProvider();
+			
+			using (RedisContext context = provider.GetService<RedisContext>())
+			{
+				Person person = new Person
+				{
+					Id = 26,
+					Name = "Emre",
+					Lastname = "Hızlı"
+				};
+				context.Set<Person>().Add(person);
+				await context.SaveChangesAsync();
+			}
 
 			#endregion
 		}

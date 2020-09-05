@@ -66,6 +66,7 @@ namespace RedisworkCore
 					ReplacePolicy = AddOptions.ReplacementPolicy.Full
 				}, set.AddOrUpdateds.ToArray());
 			}
+			Trackeds.Clear();
 		}
 
 		public async Task CommitTransactionAsync()
