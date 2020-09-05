@@ -67,15 +67,15 @@ namespace RedisworkCore.Redisearch
 
 		internal static async Task<long> CountAsync(this Client client)
 		{
-			var result = await client.SearchAsync(new Query("*").Limit(0, 1000000));
+			var query = new Query("*").Limit(0, 0);
+			var result = await client.SearchAsync(query);
 			return result.TotalResults;
 		}
 
 		internal static async Task<long> CountAsync<T>(this Client client, string whereQuery)
 		{
 			whereQuery = string.IsNullOrEmpty(whereQuery) ? "*" : whereQuery.TrimStart();
-			PropertyInfo[] props = Helpers.GetModelProperties<T>();
-			Query query = new Query(whereQuery).ReturnFields(props[0].Name);
+			Query query = new Query(whereQuery).Limit(0, 0);
 			var result = await client.SearchAsync(query);
 			return result.TotalResults;
 		}
