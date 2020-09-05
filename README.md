@@ -7,6 +7,15 @@ Redisworkcore is an ORM for redis like similar entityframework. And it using Sta
 
 * Create a context like EntityFramework context.
 * Run queries very similar LINQ.
+* You can use:
+    * Find
+    * Where
+    * All
+    * Any
+    * SortBy
+    * SortByDescending
+    * Skip
+    * Take
 
 ### A simple usage example
 
