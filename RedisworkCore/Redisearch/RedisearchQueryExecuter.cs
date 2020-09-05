@@ -65,10 +65,19 @@ namespace RedisworkCore.Redisearch
 			             .Any();
 		}
 
-		internal static long Count(this Client client)
+		internal static async Task<long> CountAsync(this Client client)
 		{
-			return client.Search(new Query("*").Limit(0, 1000000))
-			             .TotalResults;
+			var result = await client.SearchAsync(new Query("*").Limit(0, 1000000));
+			return result.TotalResults;
+		}
+
+		internal static async Task<long> CountAsync<T>(this Client client, string whereQuery)
+		{
+			whereQuery = string.IsNullOrEmpty(whereQuery) ? "*" : whereQuery.TrimStart();
+			PropertyInfo[] props = Helpers.GetModelProperties<T>();
+			Query query = new Query(whereQuery).ReturnFields(props[0].Name);
+			var result = await client.SearchAsync(query);
+			return result.TotalResults;
 		}
 
 		internal static Task<List<T>> ToListAsync<T>(this Client client, string whereQuery, List<RedisearchSortDescriptor> sorts, int skip, int take)
@@ -144,10 +153,10 @@ namespace RedisworkCore.Redisearch
 					if (prop.PropertyType == typeof(string) && !prop.IsDefined(typeof(RedisKeyValueAttribute)))
 					{
 						string sVal = (string) value;
-						
+
 						if (sVal is null) sVal = Helpers.NullString;
 						else if (sVal == string.Empty) sVal = Helpers.EmptyString;
-						
+
 						doc.Set($"{prop.Name}_tag", sVal.TagString());
 						doc.Set($"{prop.Name}_reverse_tag", sVal.ReverseString());
 						doc.Set($"{prop.Name}_subset_tag", sVal.SubsetString());

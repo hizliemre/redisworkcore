@@ -47,25 +47,25 @@ namespace RedisworkCore.Playground
 				List<Person> persons = await context.Persons.Where(x => "Emre" == x.Name).ToListAsync();
 			}
 
-			#region USING WITH DOTNET IOC
-
-			ServiceCollection services = new ServiceCollection();
-			services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			IServiceProvider provider = services.BuildServiceProvider();
-			
-			using (RedisContext context = provider.GetService<RedisContext>())
-			{
-				Person person = new Person
-				{
-					Id = 26,
-					Name = "Emre",
-					Lastname = "Hızlı"
-				};
-				context.Set<Person>().Add(person);
-				await context.SaveChangesAsync();
-			}
-
-			#endregion
+			// #region USING WITH DOTNET IOC
+			//
+			// ServiceCollection services = new ServiceCollection();
+			// services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			// IServiceProvider provider = services.BuildServiceProvider();
+			//
+			// using (RedisContext context = provider.GetService<RedisContext>())
+			// {
+			// 	Person person = new Person
+			// 	{
+			// 		Id = 26,
+			// 		Name = "Emre",
+			// 		Lastname = "Hızlı"
+			// 	};
+			// 	context.Set<Person>().Add(person);
+			// 	await context.SaveChangesAsync();
+			// }
+			//
+			// #endregion
 		}
 	}
 }
