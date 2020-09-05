@@ -48,13 +48,13 @@ namespace RedisworkCore
 			foreach (Rediset set in Trackeds)
 			{
 				await set.Client.DeleteDocumentsAsync(true, set.Deleteds.ToArray());
+				set.Deleteds.Clear();
 				await set.Client.AddDocumentsAsync(new AddOptions
 				{
 					ReplacePolicy = AddOptions.ReplacementPolicy.Full,
 				}, set.AddOrUpdateds.ToArray());
+				set.AddOrUpdateds.Clear();
 			}
-
-			Trackeds.Clear();
 		}
 
 		public async Task CommitTransactionAsync()
