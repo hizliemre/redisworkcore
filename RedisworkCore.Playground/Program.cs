@@ -11,6 +11,7 @@ namespace RedisworkCore.Playground
 		[RedisKey(0)] public int Id { get; set; }
 		public string Name { get; set; }
 		public string Lastname { get; set; }
+		public bool IsFoo { get; set; }
 	}
 
 	public class SimpleContext : RedisContext
@@ -25,19 +26,20 @@ namespace RedisworkCore.Playground
 		{
 			RedisContextOptions options = new RedisContextOptions
 			{
-				HostAndPort = "10.11.25.113:6379"
+				HostAndPort = "localhost:6379"
 			};
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
 				await context.BeginTransactionAsync();
-				for (int i = 0; i < 1400; i++)
+				for (int i = 0; i < 50; i++)
 				{
 					Person person = new Person
 					{
 						Id = i,
 						Name = "Emre",
-						Lastname = null
+						Lastname = null,
+						IsFoo = i % 2 == 0
 					};
 					context.Set<Person>().Add(person);
 				}
@@ -47,7 +49,7 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				var items = await context.Set<Person>().Where(x => x.Id > 10).Skip(0).TakeAsync(10);
+				var items = await context.Set<Person>().Where(x => !x.IsFoo).ToListAsync();
 				var count = await context.Set<Person>().CountAsync();
 				var filteredCount = await context.Set<Person>().CountAsync(x => x.Id > 10);
 			}

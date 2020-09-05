@@ -93,6 +93,8 @@ namespace RedisworkCore.Redisearch
 			{
 				/*
 				  x => string.IsNullOrEmpty(x.Name)
+				  
+				  converted to => x.Name == "" || x.Name == null
 				*/
 				var firstBinary = Expression.MakeBinary(ExpressionType.Equal, memberEx, Expression.Constant(string.Empty));
 				var secondBinary = Expression.MakeBinary(ExpressionType.Equal, memberEx, Expression.Constant(null, typeof(string)));
@@ -254,6 +256,9 @@ namespace RedisworkCore.Redisearch
 					if (string.IsNullOrEmpty(numericFormat)) throw new InvalidOperationException();
 					return string.Format(numericFormat, value);
 				case "Boolean":
+					bool bVal = (bool) value;
+					value = bVal ? 1 : 0;
+					return string.Format(numericFormat, value);
 				case "String":
 					if (string.IsNullOrEmpty(stringFormat)) throw new InvalidOperationException();
 					return string.Format(stringFormat, EscapeTokenizedChars((string) value, nodeType == RedisearchNodeType.EndsWith));
@@ -295,8 +300,8 @@ namespace RedisworkCore.Redisearch
 		{
 			string left = leftEx is BinaryExpression ? SerializeInternal(leftEx) : SerializeInternal(leftEx, nodeType);
 			string right = rightEx is BinaryExpression ? SerializeInternal(rightEx) : SerializeInternal(rightEx, nodeType);
-			
-			if ((rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null) || 
+
+			if ((rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null) ||
 			    (rightEx is MemberExpression && leftEx is ConstantExpression))
 			{
 				string temp = left;
@@ -326,6 +331,36 @@ namespace RedisworkCore.Redisearch
 
 		private static string SerializeLambda(LambdaExpression lambdaEx)
 		{
+			if (lambdaEx.Body is MemberExpression memberEx && memberEx.Type == typeof(bool))
+			{
+				/*
+					for boolean lambda
+					x => x.IsFoo
+					
+					converted to => x.IsFoo == true
+				 */
+				var visitor = new ParameterVisitor();
+				visitor.Visit(lambdaEx);
+				var binary = Expression.MakeBinary(ExpressionType.Equal, memberEx, Expression.Constant(true, typeof(bool)));
+				var lambda = Expression.Lambda(binary, visitor.Parameter);
+				return SerializeInternal(lambda);
+			}
+
+			if (lambdaEx.Body is UnaryExpression unary && unary.Operand is MemberExpression operand && operand.Type == typeof(bool))
+			{
+				/*
+					for boolean lambda
+					x => !x.IsFoo
+					
+					converted to => x.IsFoo != true
+				 */
+				var visitor = new ParameterVisitor();
+				visitor.Visit(lambdaEx);
+				var binary = Expression.MakeBinary(ExpressionType.NotEqual, operand, Expression.Constant(true, typeof(bool)));
+				var lambda = Expression.Lambda(binary, visitor.Parameter);
+				return SerializeInternal(lambda);
+			}
+
 			return SerializeInternal(lambdaEx.Body);
 		}
 
