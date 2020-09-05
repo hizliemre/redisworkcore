@@ -15,6 +15,9 @@ namespace RedisworkCore.Redisearch
 
 		public bool Any(Expression<Func<T, bool>> expression);
 
+		public Task<long> CountAsync(Expression<Func<T, bool>> expression);
+		public Task<long> CountAsync();
+
 		public Task<List<T>> ToListAsync();
 	}
 

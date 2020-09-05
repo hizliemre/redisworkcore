@@ -58,6 +58,17 @@ namespace RedisworkCore
 			return Client.Any<T>(query);
 		}
 
+		public Task<long> CountAsync(Expression<Func<T, bool>> expression)
+		{
+			string query = expression.Where();
+			return Client.CountAsync<T>(query);
+		}
+
+		public Task<long> CountAsync()
+		{
+			return Client.CountAsync();
+		}
+
 		public IRedisearchTake<T> Skip(int count)
 		{
 			_skip = count;
@@ -136,12 +147,7 @@ namespace RedisworkCore
 			string query = expression.Where(true);
 			return Client.All<T>(query);
 		}
-
-		public long Count()
-		{
-			return Client.Count();
-		}
-
+		
 		internal override void BuildIndex()
 		{
 			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
