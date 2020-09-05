@@ -13,21 +13,6 @@ using StackExchange.Redis;
 
 namespace RedisworkCore
 {
-	public class GetterSetterWrapper<TRedisset> { }
-
-	public static class GetterHelper
-	{
-		public static Func<TEntity, TProperty> CreateGetter<TEntity, TProperty>(string name) where TEntity : class
-		{
-			ParameterExpression instance = Expression.Parameter(typeof(TEntity), "instance");
-
-			MemberExpression body = Expression.Property(instance, name);
-
-			return Expression.Lambda<Func<TEntity, TProperty>>(body, instance)
-			                 .Compile();
-		}
-	}
-
 	public abstract class RedisContext : IDisposable
 	{
 		private readonly RedisContextOptions _options;
@@ -75,7 +60,10 @@ namespace RedisworkCore
 		public async Task CommitTransactionAsync()
 		{
 			if (TransactionStarted)
+			{
 				await Database.ExecuteAsync("EXEC");
+				TransactionStarted = false;
+			}
 		}
 
 		public async Task RollbackTransaction()
