@@ -295,7 +295,9 @@ namespace RedisworkCore.Redisearch
 		{
 			string left = leftEx is BinaryExpression ? SerializeInternal(leftEx) : SerializeInternal(leftEx, nodeType);
 			string right = rightEx is BinaryExpression ? SerializeInternal(rightEx) : SerializeInternal(rightEx, nodeType);
-			if (rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null)
+			
+			if ((rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null) || 
+			    (rightEx is MemberExpression && leftEx is ConstantExpression))
 			{
 				string temp = left;
 				left = right;
