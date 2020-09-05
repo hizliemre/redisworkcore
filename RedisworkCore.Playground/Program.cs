@@ -25,47 +25,53 @@ namespace RedisworkCore.Playground
 		{
 			RedisContextOptions options = new RedisContextOptions
 			{
-				HostAndPort = "localhost:6379"
+				HostAndPort = "10.11.25.113:6379"
 			};
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
 				await context.BeginTransactionAsync();
-				Person person = new Person
+				for (int i = 0; i < 300; i++)
 				{
-					Id = 26,
-					Name = "Emre",
-					Lastname = null
-				};
-				context.Set<Person>().Add(person);
+					Person person = new Person
+					{
+						Id = i,
+						Name = "Emre",
+						Lastname = null
+					};
+					context.Set<Person>().Add(person);
+				}
+
 				await context.SaveChangesAsync();
 				await context.CommitTransactionAsync();
 			}
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				List<Person> persons = await context.Persons.Where(x => "Emre" == x.Name).ToListAsync();
+				var items = await context.Set<Person>().Where(x => x.Id > 10).Skip(0).TakeAsync(10);
+				var count = await context.Set<Person>().CountAsync();
+				var filteredCount = await context.Set<Person>().CountAsync(x => x.Id > 10);
 			}
 
-			// #region USING WITH DOTNET IOC
-			//
-			// ServiceCollection services = new ServiceCollection();
-			// services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			// IServiceProvider provider = services.BuildServiceProvider();
-			//
-			// using (RedisContext context = provider.GetService<RedisContext>())
-			// {
-			// 	Person person = new Person
-			// 	{
-			// 		Id = 26,
-			// 		Name = "Emre",
-			// 		Lastname = "Hızlı"
-			// 	};
-			// 	context.Set<Person>().Add(person);
-			// 	await context.SaveChangesAsync();
-			// }
-			//
-			// #endregion
+			#region USING WITH DOTNET IOC
+			
+			ServiceCollection services = new ServiceCollection();
+			services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			IServiceProvider provider = services.BuildServiceProvider();
+			
+			using (RedisContext context = provider.GetService<RedisContext>())
+			{
+				Person person = new Person
+				{
+					Id = 26,
+					Name = "Emre",
+					Lastname = "Hızlı"
+				};
+				context.Set<Person>().Add(person);
+				await context.SaveChangesAsync();
+			}
+			
+			#endregion
 		}
 	}
 }
