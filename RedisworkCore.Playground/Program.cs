@@ -31,7 +31,7 @@ namespace RedisworkCore.Playground
 			using (SimpleContext context = new SimpleContext(options))
 			{
 				await context.BeginTransactionAsync();
-				for (int i = 0; i < 300; i++)
+				for (int i = 0; i < 1400; i++)
 				{
 					Person person = new Person
 					{
@@ -41,7 +41,6 @@ namespace RedisworkCore.Playground
 					};
 					context.Set<Person>().Add(person);
 				}
-
 				await context.SaveChangesAsync();
 				await context.CommitTransactionAsync();
 			}

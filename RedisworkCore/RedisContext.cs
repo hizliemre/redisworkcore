@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using NRediSearch;
 using Polly;
@@ -29,8 +30,9 @@ namespace RedisworkCore
 
 	public abstract class RedisContext : IDisposable
 	{
-		private readonly Dictionary<string, CtorDelegate> _getters = new Dictionary<string, CtorDelegate>();
 		private readonly RedisContextOptions _options;
+		private readonly Dictionary<Type, Rediset> _sets = new Dictionary<Type, Rediset>();
+		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 		internal readonly List<Rediset> Trackeds = new List<Rediset>();
 		private ConnectionMultiplexer _redis;
 		internal IDatabase Database;
@@ -63,9 +65,10 @@ namespace RedisworkCore
 				await set.Client.DeleteDocumentsAsync(true, set.Deleteds.ToArray());
 				await set.Client.AddDocumentsAsync(new AddOptions
 				{
-					ReplacePolicy = AddOptions.ReplacementPolicy.Full
+					ReplacePolicy = AddOptions.ReplacementPolicy.Full,
 				}, set.AddOrUpdateds.ToArray());
 			}
+
 			Trackeds.Clear();
 		}
 
@@ -83,7 +86,17 @@ namespace RedisworkCore
 
 		public Rediset<T> Set<T>() where T : class
 		{
-			return new Rediset<T>(this);
+			try
+			{
+				_locker.EnterReadLock();
+				if (_sets.ContainsKey(typeof(T))) return (Rediset<T>) _sets[typeof(T)];
+			}
+			finally
+			{
+				_locker.ExitReadLock();
+			}
+
+			throw new InvalidOperationException($"{nameof(T)} is not defined to context");
 		}
 
 		internal static string FindKey(object model)
@@ -185,6 +198,7 @@ namespace RedisworkCore
 				Rediset instance = (Rediset) ctor(this);
 				prop.SetValue(this, instance);
 				instance.BuildIndex();
+				_sets.Add(instance.EntityType, instance);
 			}
 		}
 

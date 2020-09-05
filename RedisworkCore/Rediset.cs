@@ -15,6 +15,7 @@ namespace RedisworkCore
 		internal readonly List<string> Deleteds = new List<string>();
 		internal Client Client;
 		internal abstract void BuildIndex();
+		internal abstract Type EntityType { get; }
 	}
 
 	public class Rediset<T> : Rediset, IRedisearchQueryable<T>, IRedisearchTake<T>
@@ -26,12 +27,14 @@ namespace RedisworkCore
 		private int _skip;
 		private int _take = 1000000;
 		private string _whereQuery = string.Empty;
+		internal override Type EntityType { get; }
 
 		public Rediset(RedisContext context)
 		{
 			_context = context;
 			Client = new Client($"{typeof(T).FullName}_idx", _context.Database);
 			_context.Trackeds.Add(this);
+			EntityType = typeof(T);
 		}
 
 		public IRedisearchQueryable<T> Where(Expression<Func<T, bool>> expression)
@@ -99,8 +102,7 @@ namespace RedisworkCore
 
 		public void Add(params T[] models)
 		{
-			Document[] docs = models.Select(CreateDocument)
-			                        .ToArray();
+			Document[] docs = models.Select(CreateDocument).ToArray();
 			lock (_locker)
 			{
 				AddOrUpdateds.AddRange(docs);
@@ -147,13 +149,14 @@ namespace RedisworkCore
 			string query = expression.Where(true);
 			return Client.All<T>(query);
 		}
-		
+
 		internal override void BuildIndex()
 		{
 			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
 			if (indexExist) return;
 			Client.CreateIndex<T>();
 		}
+
 
 		private static Document CreateDocument(T model)
 		{
