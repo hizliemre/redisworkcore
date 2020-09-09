@@ -35,7 +35,7 @@ Redisworkcore is an ORM for redis like similar entityframework. And it using Sta
 
     static async Task Main(string[] args)
     {
-    
+      
       RedisContextOptions options = new RedisContextOptions
       {
         HostAndPort = "localhost:6379"
@@ -43,6 +43,9 @@ Redisworkcore is an ORM for redis like similar entityframework. And it using Sta
 
       using (var context = new SimpleContext(options))
       {
+        // you should remove this method after ran one time.
+        context.BuildIndex();
+        
         var person = new Person
         {
           Id = 26,
