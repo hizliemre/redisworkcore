@@ -80,22 +80,17 @@ namespace RedisworkCore
 
 		public Rediset<T> Set<T>() where T : class
 		{
-			bool upgraded = false;
 			try
 			{
-				_locker.EnterUpgradeableReadLock();
+				_locker.EnterReadLock();
 				if (_sets.ContainsKey(typeof(T))) return (Rediset<T>) _sets[typeof(T)];
-				upgraded = true;
-				_locker.EnterWriteLock();
-				Rediset<T> instance = new Rediset<T>(this);
-				_sets.Add(typeof(T), instance);
-				return instance;
 			}
 			finally
 			{
-				if (upgraded) _locker.ExitWriteLock();
-				_locker.ExitUpgradeableReadLock();
+				_locker.ExitReadLock();
 			}
+
+			throw new InvalidOperationException($"{nameof(T)} is not defined to context");
 		}
 
 		internal static string FindKey(object model)
@@ -196,8 +191,7 @@ namespace RedisworkCore
 				CtorDelegate ctor = CreateConstructor(prop.PropertyType);
 				Rediset instance = (Rediset) ctor(this);
 				prop.SetValue(this, instance);
-				if (buildIndex)
-					instance.BuildIndex();
+				if (buildIndex) instance.BuildIndex();
 				_sets.Add(instance.EntityType, instance);
 			}
 		}
