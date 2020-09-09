@@ -27,6 +27,11 @@ namespace RedisworkCore
 		{
 			_options = options;
 			Connect();
+		}
+
+		public void BuildIndex()
+		{
+			Database.Execute("FLUSHALL");
 			SetContext();
 		}
 
@@ -74,17 +79,22 @@ namespace RedisworkCore
 
 		public Rediset<T> Set<T>() where T : class
 		{
+			bool upgraded = false;
 			try
 			{
-				_locker.EnterReadLock();
+				_locker.EnterUpgradeableReadLock();
 				if (_sets.ContainsKey(typeof(T))) return (Rediset<T>) _sets[typeof(T)];
+				upgraded = true;
+				_locker.EnterWriteLock();
+				Rediset<T> instance = new Rediset<T>(this);
+				_sets.Add(typeof(T), instance);
+				return instance;
 			}
 			finally
 			{
-				_locker.ExitReadLock();
+				if (upgraded) _locker.ExitWriteLock();
+				_locker.ExitUpgradeableReadLock();
 			}
-
-			throw new InvalidOperationException($"{nameof(T)} is not defined to context");
 		}
 
 		internal static string FindKey(object model)

@@ -14,10 +14,15 @@ namespace RedisworkCore.Playground
 		public bool IsFoo { get; set; }
 	}
 
+	public class MemberDeneme
+	{
+		public int? HasInt { get; set; }
+	}
+
 	public class SimpleContext : RedisContext
 	{
+		public Rediset<Person> Person { get; set; }
 		public SimpleContext(RedisContextOptions options) : base(options) { }
-		public Rediset<Person> Persons { get; set; }
 	}
 
 	internal class Program
@@ -28,6 +33,7 @@ namespace RedisworkCore.Playground
 			{
 				HostAndPort = "localhost:6379"
 			};
+
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
@@ -43,36 +49,35 @@ namespace RedisworkCore.Playground
 					};
 					context.Set<Person>().Add(person);
 				}
+
 				await context.SaveChangesAsync();
 				await context.CommitTransactionAsync();
 			}
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				var items = await context.Set<Person>().Where(x => !x.IsFoo).ToListAsync();
-				var count = await context.Set<Person>().CountAsync();
-				var filteredCount = await context.Set<Person>().CountAsync(x => x.Id > 10);
+				var items = await context.Set<Person>().Where(x => x.Name == "Emre").ToListAsync();
 			}
-
-			#region USING WITH DOTNET IOC
-			
-			ServiceCollection services = new ServiceCollection();
-			services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			IServiceProvider provider = services.BuildServiceProvider();
-			
-			using (RedisContext context = provider.GetService<RedisContext>())
-			{
-				Person person = new Person
-				{
-					Id = 26,
-					Name = "Emre",
-					Lastname = "Hızlı"
-				};
-				context.Set<Person>().Add(person);
-				await context.SaveChangesAsync();
-			}
-			
-			#endregion
+			//
+			// #region USING WITH DOTNET IOC
+			//
+			// ServiceCollection services = new ServiceCollection();
+			// services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
+			// IServiceProvider provider = services.BuildServiceProvider();
+			//
+			// using (RedisContext context = provider.GetService<RedisContext>())
+			// {
+			// 	Person person = new Person
+			// 	{
+			// 		Id = 26,
+			// 		Name = "Emre",
+			// 		Lastname = "Hızlı"
+			// 	};
+			// 	context.Set<Person>().Add(person);
+			// 	await context.SaveChangesAsync();
+			// }
+			//
+			// #endregion
 		}
 	}
 }

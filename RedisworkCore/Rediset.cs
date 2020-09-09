@@ -152,8 +152,8 @@ namespace RedisworkCore
 
 		internal override void BuildIndex()
 		{
-			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
-			if (indexExist) return;
+			// bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
+			// if (indexExist) Client.DropIndex();
 			Client.CreateIndex<T>();
 		}
 
