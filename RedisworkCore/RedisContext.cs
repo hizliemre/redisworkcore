@@ -27,12 +27,13 @@ namespace RedisworkCore
 		{
 			_options = options;
 			Connect();
+			SetContext();
 		}
 
 		public void BuildIndex()
 		{
 			Database.Execute("FLUSHALL");
-			SetContext();
+			SetContext(true);
 		}
 
 		public void Dispose()
@@ -181,7 +182,7 @@ namespace RedisworkCore
 				throw result.FinalException.InnerException ?? result.FinalException;
 		}
 
-		private void SetContext()
+		private void SetContext(bool buildIndex = false)
 		{
 			IEnumerable<PropertyInfo> props = GetType()
 			                                  .GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -195,7 +196,8 @@ namespace RedisworkCore
 				CtorDelegate ctor = CreateConstructor(prop.PropertyType);
 				Rediset instance = (Rediset) ctor(this);
 				prop.SetValue(this, instance);
-				instance.BuildIndex();
+				if (buildIndex)
+					instance.BuildIndex();
 				_sets.Add(instance.EntityType, instance);
 			}
 		}
