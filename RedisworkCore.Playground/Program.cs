@@ -11,12 +11,12 @@ namespace RedisworkCore.Playground
 		[RedisKey(0)] public int Id { get; set; }
 		public string Name { get; set; }
 		public string Lastname { get; set; }
-		public bool IsFoo { get; set; }
+		public List<Hobby> Hobbies { get; set; }
 	}
 
-	public class MemberDeneme
+	public class Hobby
 	{
-		public int? HasInt { get; set; }
+		public string Name { get; set; }
 	}
 
 	public class SimpleContext : RedisContext
@@ -34,22 +34,43 @@ namespace RedisworkCore.Playground
 				HostAndPort = "localhost:6379"
 			};
 
+			using (SimpleContext context = new SimpleContext(options))
+			{
+				context.BuildIndex();
+			}
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
 				await context.BeginTransactionAsync();
-				for (int i = 0; i < 50; i++)
+				Person p1 = new Person
 				{
-					Person person = new Person
+					Id = 1,
+					Name = "Emre",
+					Lastname = "Hızlı",
+					Hobbies = new List<Hobby>
 					{
-						Id = i,
-						Name = "Emre",
-						Lastname = null,
-						IsFoo = i % 2 == 0
-					};
-					context.Set<Person>().Add(person);
-				}
-
+						new Hobby {Name = "İçki içmek"},
+						new Hobby {Name = "Kul hakkı yemek"},
+						new Hobby {Name = "Domuz eti yemek"},
+						new Hobby {Name = "Zina yapmak"},
+					}
+				};
+				context.Set<Person>().Add(p1);
+				Person p2 = new Person
+				{
+					Id = 2,
+					Name = "Yasir",
+					Lastname = "Ersoy",
+					Hobbies = new List<Hobby>
+					{
+						new Hobby {Name = "Namaz kılmak"},
+						new Hobby {Name = "Hacca gitmek"},
+						new Hobby {Name = "Oruç tutmak"},
+						new Hobby {Name = "Zekat vermek"},
+						new Hobby {Name = "Kelime-i şehadet getirmek"}
+					}
+				};
+				context.Set<Person>().Add(p2);
 				await context.SaveChangesAsync();
 				await context.CommitTransactionAsync();
 			}
@@ -58,26 +79,6 @@ namespace RedisworkCore.Playground
 			{
 				var items = await context.Set<Person>().Where(x => x.Name == "Emre").ToListAsync();
 			}
-			//
-			// #region USING WITH DOTNET IOC
-			//
-			// ServiceCollection services = new ServiceCollection();
-			// services.AddRedisContext<RedisContext, SimpleContext>(o => o.HostAndPort = "localhost:6379");
-			// IServiceProvider provider = services.BuildServiceProvider();
-			//
-			// using (RedisContext context = provider.GetService<RedisContext>())
-			// {
-			// 	Person person = new Person
-			// 	{
-			// 		Id = 26,
-			// 		Name = "Emre",
-			// 		Lastname = "Hızlı"
-			// 	};
-			// 	context.Set<Person>().Add(person);
-			// 	await context.SaveChangesAsync();
-			// }
-			//
-			// #endregion
 		}
 	}
 }
