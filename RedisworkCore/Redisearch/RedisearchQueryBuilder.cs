@@ -244,6 +244,19 @@ namespace RedisworkCore.Redisearch
 				_                                     => string.Empty
 			};
 
+			string doubleFormat = nodeType switch
+			{
+				RedisearchNodeType.Equal              => "{{0}}:[{0} {1}]",
+				RedisearchNodeType.NotEqual           => "-{{0}}:[{0} {1}]",
+				RedisearchNodeType.GreaterThan        => "[({0} +inf]",
+				RedisearchNodeType.GreaterThanOrEqual => "[{0} +inf]",
+				RedisearchNodeType.LessThan           => "[-inf ({1}]",
+				RedisearchNodeType.LessThanOrEqual    => "[-inf {1}]",
+				RedisearchNodeType.Contains           => "{{0}}:[{0} {1}]",
+				_                                     => string.Empty
+			};
+
+
 			string stringFormat = nodeType switch
 			{
 				RedisearchNodeType.Equal => "{{0}}_tag:{{{{{0}}}}}",
@@ -267,9 +280,14 @@ namespace RedisworkCore.Redisearch
 				case "UInt64":
 				case "UInt32":
 				case "UInt16":
-				case "Double":
 					if (string.IsNullOrEmpty(numericFormat)) throw new InvalidOperationException();
 					return string.Format(numericFormat, value);
+				case "Double":
+					if (string.IsNullOrEmpty(doubleFormat)) throw new InvalidOperationException();
+					double dVal = Convert.ToDouble(value);
+					double dVal1 = nodeType == RedisearchNodeType.GreaterThan ? dVal * 1.00001D : dVal / 1.00001D;
+					double dVal2 = nodeType == RedisearchNodeType.LessThan ? dVal / 1.00001D : dVal * 1.00001D;
+					return string.Format(doubleFormat, dVal1, dVal2);
 				case "Boolean":
 					bool bVal = (bool) value;
 					value = bVal ? 1 : 0;
