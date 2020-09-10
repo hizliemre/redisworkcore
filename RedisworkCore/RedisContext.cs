@@ -33,6 +33,7 @@ namespace RedisworkCore
 		public void BuildIndex()
 		{
 			Database.Execute("FLUSHALL");
+			_sets.Clear();
 			SetContext(true);
 		}
 
@@ -78,7 +79,7 @@ namespace RedisworkCore
 				await Database.ExecuteAsync("DISCARD");
 		}
 
-		public Rediset<T> Set<T>() where T : class
+		public Rediset<T> Set<T>() where T : class, new()
 		{
 			try
 			{

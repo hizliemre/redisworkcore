@@ -22,17 +22,12 @@ namespace RedisworkCore.Redisearch
 		internal static void CreateIndex<T>(this Client client)
 		{
 			PropertyInfo[] props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-			                                .Where(x => !x.IsDefined(typeof(RedisKeyValueAttribute)))
+			                                .Where(x => !x.IsDefined(typeof(RedisIgnoreAttribute)))
 			                                .ToArray();
+
 			Schema scheme = new Schema();
 			foreach (PropertyInfo prop in props)
-				if (prop.PropertyType.IsGenericType && (prop.PropertyType.GenericTypeArguments[0] == typeof(string) || prop.PropertyType.GenericTypeArguments[0] is { IsValueType: true }))
-					scheme.AddTagField(prop.Name, Helpers.TagSeperator);
-				else if (prop.PropertyType == typeof(string) || prop.PropertyType.IsValueType)
-					prop.BuildField(scheme);
-
-			PropertyInfo keyProperty = Helpers.GetRedisKeyValueAttributes<T>();
-			if (keyProperty != null) BuildField(keyProperty, scheme);
+				prop.BuildField(scheme);
 
 			Client.ConfiguredIndexOptions indexOptions = new Client.ConfiguredIndexOptions(Client.IndexOptions.DisableStopWords | Client.IndexOptions.UseTermOffsets);
 			client.CreateIndex(scheme, indexOptions);
@@ -46,6 +41,24 @@ namespace RedisworkCore.Redisearch
 				return;
 			}
 
+			if (propertyInfo.PropertyType.IsGenericType && (propertyInfo.PropertyType.GenericTypeArguments[0] == typeof(string) || propertyInfo.PropertyType.GenericTypeArguments[0] is { IsValueType: true }))
+			{
+				scheme.AddTagField(propertyInfo.Name, Helpers.TagSeperator);
+				return;
+			}
+
+			if (propertyInfo.PropertyType.IsClass && propertyInfo.PropertyType != typeof(string))
+			{
+				scheme.AddField(new Schema.TextField(propertyInfo.Name, sortable: false, noIndex: true));
+				return;
+			}
+
+			if (propertyInfo.PropertyType.IsGenericType && propertyInfo.PropertyType.GenericTypeArguments[0].IsClass)
+			{
+				scheme.AddField(new Schema.TextField(propertyInfo.Name, sortable: false, noIndex: true));
+				return;
+			}
+
 			switch (propertyInfo.PropertyType.Name)
 			{
 				case "String":
@@ -53,10 +66,10 @@ namespace RedisworkCore.Redisearch
 					scheme.AddTagField($"{propertyInfo.Name}_tag", Helpers.TagSeperator);
 					scheme.AddTagField($"{propertyInfo.Name}_reverse_tag", Helpers.TagSeperator);
 					scheme.AddTagField($"{propertyInfo.Name}_subset_tag", Helpers.TagSeperator);
-					break;
+					return;
 				case "Decimal":
 					scheme.AddTextField(propertyInfo.Name);
-					break;
+					return;
 				case "Byte":
 				case "Int64":
 				case "Int32":
@@ -67,8 +80,10 @@ namespace RedisworkCore.Redisearch
 				case "Double":
 				case "Boolean":
 					scheme.AddSortableNumericField(propertyInfo.Name);
-					break;
+					return;
 			}
+
+			throw new NotSupportedException(propertyInfo.PropertyType.FullName);
 		}
 
 		private static string SerializeInternal(Expression exp, RedisearchNodeType? nodeType = null)

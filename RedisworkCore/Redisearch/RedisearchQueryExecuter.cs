@@ -81,6 +81,7 @@ namespace RedisworkCore.Redisearch
 		}
 
 		internal static Task<List<T>> ToListAsync<T>(this Client client, string whereQuery, List<RedisearchSortDescriptor> sorts, int skip, int take)
+			where T : class, new()
 		{
 			whereQuery = string.IsNullOrEmpty(whereQuery) ? "*" : whereQuery.TrimStart();
 			if (sorts.Count > 1) return client.ToListWithMultipleSortAsync<T>(whereQuery, skip, take, sorts);
@@ -88,6 +89,7 @@ namespace RedisworkCore.Redisearch
 		}
 
 		private static async Task<List<T>> ToListWithSingleSortAsync<T>(this Client client, string whereQuery, int skip, int take, RedisearchSortDescriptor sort = null)
+			where T : class, new()
 		{
 			Query query = new Query(whereQuery);
 			if (sort != null)
@@ -98,13 +100,32 @@ namespace RedisworkCore.Redisearch
 			query = query.Limit(skip, take).ReturnFields(returnFields);
 			SearchResult queryResult = await client.SearchAsync(query);
 			if (queryResult is null) return new List<T>();
-			return queryResult.Documents.Select(x =>
-			                  {
-				                  string serialized = JsonConvert.SerializeObject(x.GetProperties());
-				                  T deserialized = JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
-				                  return deserialized;
-			                  })
+			return queryResult.Documents.Select(x => SerializeProperties<T>(props, x.GetProperties().ToList()))
 			                  .ToList();
+		}
+
+		private static T SerializeProperties<T>(PropertyInfo[] objProps, List<KeyValuePair<string, RedisValue>> properties) where T : class, new()
+		{
+			var deserializedObj = new T();
+			foreach (PropertyInfo prop in objProps)
+			{
+				var redisProp = properties.SingleOrDefault(x => x.Key == prop.Name);
+				var val = DeserializeRedisValue(prop.PropertyType, redisProp.Value);
+				prop.SetValue(deserializedObj, val);
+			}
+
+			return deserializedObj;
+		}
+
+		private static object DeserializeRedisValue(Type propType, RedisValue value)
+		{
+			if (propType.IsGenericType || propType.IsClass && propType != typeof(string))
+			{
+				var deserialized = JsonConvert.DeserializeObject(value, propType, RedisearchSerializerSettings.SerializerSettings);
+				return deserialized;
+			}
+
+			return Convert.ChangeType(value, propType);
 		}
 
 		private static async Task<List<T>> ToListWithMultipleSortAsync<T>(this Client client, string whereQuery, int skip, int take, List<RedisearchSortDescriptor> sorts)
@@ -165,6 +186,13 @@ namespace RedisworkCore.Redisearch
 					continue;
 				}
 
+				if (prop.PropertyType.IsClass)
+				{
+					object val = prop.GetValue(model);
+					string serialized = JsonConvert.SerializeObject(val);
+					doc.Set(prop.Name, serialized);
+				}
+
 				throw new NotSupportedException();
 			}
 
@@ -173,7 +201,7 @@ namespace RedisworkCore.Redisearch
 
 		private static void CreateDocumentFromGenericType<T>(this Document doc, PropertyInfo prop, T model)
 		{
-			if (prop.PropertyType.GenericTypeArguments[0] == typeof(string) || prop.PropertyType.GenericTypeArguments[0] is { IsValueType: true })
+			if (prop.PropertyType.GenericTypeArguments[0] == typeof(string) || prop.PropertyType.GenericTypeArguments[0].IsValueType)
 			{
 				IList values = prop.GetValue(model) as IList;
 				if (values is null) return;
@@ -183,6 +211,14 @@ namespace RedisworkCore.Redisearch
 					_join.Add(value.ToString());
 				string tags = string.Join(Helpers.TagSeperator, _join);
 				doc.Set(prop.Name, tags);
+				return;
+			}
+
+			if (prop.PropertyType.GenericTypeArguments[0].IsClass)
+			{
+				object val = prop.GetValue(model);
+				string serialized = JsonConvert.SerializeObject(val);
+				doc.Set(prop.Name, serialized);
 				return;
 			}
 

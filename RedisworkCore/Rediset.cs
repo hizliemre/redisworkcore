@@ -19,7 +19,7 @@ namespace RedisworkCore
 	}
 
 	public class Rediset<T> : Rediset, IRedisearchQueryable<T>, IRedisearchTake<T>
-		where T : class
+		where T : class, new()
 	{
 		private readonly RedisContext _context;
 		private readonly object _locker = new object();
