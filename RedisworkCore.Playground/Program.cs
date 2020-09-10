@@ -11,6 +11,8 @@ namespace RedisworkCore.Playground
 		[RedisKey(0)] public int Id { get; set; }
 		public string Name { get; set; }
 		public string Lastname { get; set; }
+
+		public double Kalinlik { get; set; }
 		public List<Hobby> Hobbies { get; set; }
 	}
 
@@ -47,6 +49,7 @@ namespace RedisworkCore.Playground
 					Id = 1,
 					Name = "Emre",
 					Lastname = "Hızlı",
+					Kalinlik = 1.1,
 					Hobbies = new List<Hobby>
 					{
 						new Hobby {Name = "İçki içmek"},
@@ -61,6 +64,7 @@ namespace RedisworkCore.Playground
 					Id = 2,
 					Name = "Yasir",
 					Lastname = "Ersoy",
+					Kalinlik = 1.4,
 					Hobbies = new List<Hobby>
 					{
 						new Hobby {Name = "Namaz kılmak"},
@@ -77,7 +81,7 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				var items = await context.Set<Person>().Where(x => x.Name == "Emre").ToListAsync();
+				var items = await context.Set<Person>().Where(x => x.Kalinlik <= 1.4).ToListAsync();
 			}
 		}
 	}
