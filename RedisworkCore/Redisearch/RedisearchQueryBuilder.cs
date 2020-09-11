@@ -197,7 +197,7 @@ namespace RedisworkCore.Redisearch
 
 		private static string SerializeConstant(ConstantExpression constatEx, RedisearchNodeType? nodeType)
 		{
-			if (!nodeType.HasValue) throw new InvalidOperationException();
+			if (!nodeType.HasValue) return string.Empty;
 
 			if (constatEx.Type.IsGenericType)
 			{
