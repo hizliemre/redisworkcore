@@ -33,7 +33,7 @@ namespace RedisworkCore.Playground
 		{
 			RedisContextOptions options = new RedisContextOptions
 			{
-				HostAndPort = "localhost:6379"
+				HostAndPort = "localhost:6380"
 			};
 
 			using (SimpleContext context = new SimpleContext(options))
@@ -81,7 +81,12 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				var items = await context.Set<Person>().Where(x => x.Kalinlik <= 1.4).ToListAsync();
+				await context.BeginTransactionAsync();
+				var p1 = new Person {Id = 2};
+				context.Set<Person>().Delete(p1);
+				await context.SaveChangesAsync();
+				await context.CommitTransactionAsync();
+				var items = await context.Set<Person>().ToListAsync();
 			}
 		}
 	}

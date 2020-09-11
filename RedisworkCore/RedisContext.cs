@@ -54,7 +54,9 @@ namespace RedisworkCore
 		{
 			foreach (Rediset set in Trackeds)
 			{
-				await set.Client.DeleteDocumentsAsync(true, set.Deleteds.ToArray());
+				foreach (string docId in set.Deleteds)
+					await Database.ExecuteAsync("FT.DEL", set.Client.IndexName, docId, "DD");
+				
 				set.Deleteds.Clear();
 				await set.Client.AddDocumentsAsync(new AddOptions
 				{
