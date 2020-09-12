@@ -11,11 +11,12 @@ namespace RedisworkCore
 		public const string TagSeperator = "~";
 		public const string NullString = "___|null|___";
 		public const string EmptyString = "___|empty|___";
+
 		public static string TagString(this string text)
 		{
 			return text.ToLower();
 		}
-		
+
 		public static string ReverseString(this string text)
 		{
 			if (text == NullString) return string.Empty;
@@ -39,9 +40,9 @@ namespace RedisworkCore
 
 		public static PropertyInfo GetRedisKeyValueAttributes<T>()
 		{
-			var keyAttrs = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-									.Where(x => x.IsDefined(typeof(RedisKeyValueAttribute)))
-									.ToArray();
+			PropertyInfo[] keyAttrs = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+			                                   .Where(x => x.IsDefined(typeof(RedisKeyValueAttribute)))
+			                                   .ToArray();
 
 			if (keyAttrs.Length > 1) throw new InvalidOperationException("Model should have only one RedisKeyValueAttribute.");
 			if (keyAttrs.Length == 1 && keyAttrs[0].PropertyType != typeof(string)) throw new InvalidOperationException("Model key property type should be string.");
@@ -50,7 +51,7 @@ namespace RedisworkCore
 
 		public static PropertyInfo[] GetModelProperties<T>()
 		{
-			return typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+			return typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => !x.IsDefined(typeof(RedisIgnoreAttribute)) && x.GetSetMethod() != null).ToArray();
 		}
 	}
 }
