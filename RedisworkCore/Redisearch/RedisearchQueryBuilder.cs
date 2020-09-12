@@ -21,9 +21,7 @@ namespace RedisworkCore.Redisearch
 
 		internal static void CreateIndex<T>(this Client client)
 		{
-			PropertyInfo[] props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-			                                .Where(x => !x.IsDefined(typeof(RedisIgnoreAttribute)))
-			                                .ToArray();
+			PropertyInfo[] props = Helpers.GetModelProperties<T>();
 
 			Schema scheme = new Schema();
 			foreach (PropertyInfo prop in props)

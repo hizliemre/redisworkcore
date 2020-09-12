@@ -21,7 +21,7 @@ namespace RedisworkCore
 		internal readonly List<Rediset> Trackeds = new List<Rediset>();
 		private ConnectionMultiplexer _redis;
 		internal IDatabase Database;
-		public bool TransactionStarted;
+		public volatile bool TransactionStarted;
 
 		protected RedisContext(RedisContextOptions options)
 		{
@@ -56,7 +56,7 @@ namespace RedisworkCore
 			{
 				foreach (string docId in set.Deleteds)
 					await Database.ExecuteAsync("FT.DEL", set.Client.IndexName, docId, "DD");
-				
+
 				set.Deleteds.Clear();
 				await set.Client.AddDocumentsAsync(new AddOptions
 				{
