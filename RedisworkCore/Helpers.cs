@@ -51,7 +51,7 @@ namespace RedisworkCore
 
 		public static PropertyInfo[] GetModelProperties<T>()
 		{
-			return typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => !x.IsDefined(typeof(RedisIgnoreAttribute)) && x.GetSetMethod() != null).ToArray();
+			return typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => !x.IsDefined(typeof(RedisIgnoreAttribute))).ToArray();
 		}
 	}
 }
