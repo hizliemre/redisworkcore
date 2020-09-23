@@ -6,9 +6,9 @@
         <Product>RedisworkCore</Product>
         <Description>Redisworkcore is an ORM like similar entityframework</Description>
         <PackageTags>redis,redisearch,nredisearch,entityframework</PackageTags>
-        <AssemblyVersion>1.1.4</AssemblyVersion>
-        <FileVersion>1.1.4</FileVersion>
-        <PackageVersion>1.1.4</PackageVersion>
+        <AssemblyVersion>1.1.5</AssemblyVersion>
+        <FileVersion>1.1.5</FileVersion>
+        <PackageVersion>1.1.5</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/hizliemre/redisworkcore</PackageProjectUrl>
