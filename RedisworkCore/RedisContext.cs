@@ -30,7 +30,7 @@ namespace RedisworkCore
 			SetContext();
 		}
 
-		public void BuildIndex()
+		public void RebuildAllIndexes()
 		{
 			Database.Execute("FLUSHALL");
 			_sets.Clear();
