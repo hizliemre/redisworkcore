@@ -317,7 +317,8 @@ namespace RedisworkCore.Redisearch
 				return SerializeConstant(constantEx, nodeType);
 			}
 
-			if (memberEx.Expression is null && memberEx.NodeType == ExpressionType.MemberAccess)
+			if (memberEx.Expression is null && memberEx.NodeType == ExpressionType.MemberAccess
+				|| memberEx.Expression is ConstantExpression)
 			{
 				var value = Expression.Lambda(memberEx).Compile().DynamicInvoke();
 				ConstantExpression constantEx = Expression.Constant(value);
@@ -333,7 +334,7 @@ namespace RedisworkCore.Redisearch
 			string right = rightEx is BinaryExpression ? SerializeInternal(rightEx) : SerializeInternal(rightEx, nodeType);
 
 			if ((rightEx is MemberExpression && leftEx is MemberExpression leftMemberEx && leftMemberEx.Expression is null) ||
-			    (rightEx is MemberExpression && leftEx is ConstantExpression))
+				(rightEx is MemberExpression && leftEx is ConstantExpression))
 			{
 				string temp = left;
 				left = right;
@@ -410,8 +411,8 @@ namespace RedisworkCore.Redisearch
 						case ConstantExpression _:
 						{
 							object value = Expression.Lambda(innerMemberEx)
-							                         .Compile()
-							                         .DynamicInvoke();
+													 .Compile()
+													 .DynamicInvoke();
 							return Expression.Constant(value);
 						}
 					}
@@ -420,8 +421,8 @@ namespace RedisworkCore.Redisearch
 			if (expression is MethodCallExpression methodCallEx)
 			{
 				object value = Expression.Lambda(methodCallEx)
-				                         .Compile()
-				                         .DynamicInvoke();
+										 .Compile()
+										 .DynamicInvoke();
 				return Expression.Constant(value);
 			}
 

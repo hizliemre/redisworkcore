@@ -8,7 +8,8 @@ namespace RedisworkCore.Playground
 {
 	public class Person
 	{
-		[RedisKey(0)] public int Id { get; set; }
+		[RedisKey(0)]
+		public int Id { get; set; }
 		public string Name { get; set; }
 		public string Lastname { get; set; }
 
@@ -27,13 +28,18 @@ namespace RedisworkCore.Playground
 		public SimpleContext(RedisContextOptions options) : base(options) { }
 	}
 
+	public class Filter
+	{
+		public int Kimlik { get; set; }
+	}
+
 	internal class Program
 	{
 		private static async Task Main(string[] args)
 		{
 			RedisContextOptions options = new RedisContextOptions
 			{
-				HostAndPort = "localhost:6380"
+				HostAndPort = "localhost:6379"
 			};
 
 			using (SimpleContext context = new SimpleContext(options))
@@ -81,12 +87,9 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				await context.BeginTransactionAsync();
-				var p1 = new Person {Id = 2};
-				context.Set<Person>().Delete(p1);
-				await context.SaveChangesAsync();
-				await context.CommitTransactionAsync();
-				var items = await context.Set<Person>().ToListAsync();
+				var filter = new Filter {Kimlik = 2};
+				var a = filter.Kimlik;
+				var items = await context.Set<Person>().Where(x => x.Id == a).ToListAsync();
 			}
 		}
 	}
