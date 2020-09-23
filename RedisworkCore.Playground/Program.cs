@@ -44,7 +44,8 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				context.BuildIndex();
+				context.RebuildAllIndexes();
+				// context.Person.RebuildIndex();
 			}
 
 			using (SimpleContext context = new SimpleContext(options))

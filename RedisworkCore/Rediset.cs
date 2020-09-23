@@ -152,11 +152,15 @@ namespace RedisworkCore
 
 		internal override void BuildIndex()
 		{
-			// bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
-			// if (indexExist) Client.DropIndex();
 			Client.CreateIndex<T>();
 		}
 
+		public void RebuildIndex()
+		{
+			bool indexExist = _context.Database.KeyExists($"idx:{Client.IndexName}");
+			if (indexExist) Client.DropIndex();
+			BuildIndex();
+		}
 
 		private static Document CreateDocument(T model)
 		{
