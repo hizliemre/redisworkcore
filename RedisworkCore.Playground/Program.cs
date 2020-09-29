@@ -90,7 +90,7 @@ namespace RedisworkCore.Playground
 			{
 				var filter = new Filter {Kimlik = 2};
 				var a = filter.Kimlik;
-				var items = await context.Set<Person>().Where(x => x.Id == a).ToListAsync();
+				var items = await context.Set<Person>().SortByDescending(x => x.Kalinlik).ToListAsync();
 			}
 		}
 	}
