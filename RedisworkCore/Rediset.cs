@@ -55,6 +55,18 @@ namespace RedisworkCore
 			return this;
 		}
 
+		public IRedisearchQueryable<T> SortBy(string propertyName)
+		{
+			RedisearchQueryExecuter.SortBy<T>(propertyName, _sorts);
+			return this;
+		}
+
+		public IRedisearchQueryable<T> SortByDescending(string propertyName)
+		{
+			RedisearchQueryExecuter.SortByDescending<T>(propertyName, _sorts);
+			return this;
+		}
+
 		public bool Any(Expression<Func<T, bool>> expression)
 		{
 			string query = expression.Where();
@@ -121,8 +133,8 @@ namespace RedisworkCore
 		public void Delete(params T[] models)
 		{
 			string[] docIds = models.Select(CreateDocument)
-			                        .Select(x => x.Id)
-			                        .ToArray();
+									.Select(x => x.Id)
+									.ToArray();
 			lock (_locker)
 			{
 				Deleteds.AddRange(docIds);
@@ -132,7 +144,7 @@ namespace RedisworkCore
 		public void Update(params T[] models)
 		{
 			Document[] docs = models.Select(CreateDocument)
-			                        .ToArray();
+									.ToArray();
 			lock (_locker)
 			{
 				AddOrUpdateds.AddRange(docs);

@@ -49,20 +49,30 @@ namespace RedisworkCore.Redisearch
 			sorts.Add(new RedisearchSortDescriptor {Ascending = false, PropertyName = propName});
 		}
 
+		internal static void SortBy<T>(string propName, List<RedisearchSortDescriptor> sorts)
+		{
+			sorts.Add(new RedisearchSortDescriptor {Ascending = true, PropertyName = propName});
+		}
+
+		internal static void SortByDescending<T>(string propName, List<RedisearchSortDescriptor> sorts)
+		{
+			sorts.Add(new RedisearchSortDescriptor {Ascending = false, PropertyName = propName});
+		}
+
 		internal static bool Any<T>(this Client client, string whereQuery)
 		{
 			if (string.IsNullOrEmpty(whereQuery)) throw new InvalidOperationException("Filter expression cannot be empty.");
 			return client.Search(new Query(whereQuery))
-			             .Documents
-			             .Any();
+						 .Documents
+						 .Any();
 		}
 
 		internal static bool All<T>(this Client client, string whereQuery)
 		{
 			if (string.IsNullOrEmpty(whereQuery)) throw new InvalidOperationException("Filter expression cannot be empty.");
 			return client.Search(new Query(whereQuery))
-			             .Documents
-			             .Any();
+						 .Documents
+						 .Any();
 		}
 
 		internal static async Task<long> CountAsync(this Client client)
@@ -108,15 +118,15 @@ namespace RedisworkCore.Redisearch
 		{
 			PropertyInfo[] props = Helpers.GetModelProperties<T>().Where(x => x.GetSetMethod() != null).ToArray();
 			SortedField[] sort = sorts.Select(x => new SortedField($"@{x.PropertyName}", x.Ascending ? Order.Ascending : Order.Descending))
-			                          .ToArray();
+									  .ToArray();
 			string[] returnFields = props.Select(x => x.Name).ToArray();
 			AggregationBuilder aggregation = new AggregationBuilder(whereQuery).Load(returnFields)
-			                                                                   .SortBy(sort)
-			                                                                   .Limit(skip, take);
+																			   .SortBy(sort)
+																			   .Limit(skip, take);
 			AggregationResult aggreagate = await client.AggregateAsync(aggregation);
 			IReadOnlyList<Dictionary<string, RedisValue>> aggregationResult = aggreagate.GetResults();
 			return aggregationResult.Select(x => SerializeProperties<T>(props, x.ToList()))
-			                        .ToList();
+									.ToList();
 		}
 
 		private static T SerializeProperties<T>(PropertyInfo[] objProps, List<KeyValuePair<string, RedisValue>> properties) where T : class, new()
@@ -142,7 +152,7 @@ namespace RedisworkCore.Redisearch
 
 			return Convert.ChangeType(value, propType);
 		}
-		
+
 		internal static Document CreateDocument<T>(this T model, string key)
 		{
 			PropertyInfo[] props = Helpers.GetModelProperties<T>();

@@ -12,6 +12,10 @@ namespace RedisworkCore.Redisearch
 		public IRedisearchQueryable<T> SortBy(Expression<Func<T, object>> propSelector);
 
 		public IRedisearchQueryable<T> SortByDescending(Expression<Func<T, object>> propSelector);
+		
+		public IRedisearchQueryable<T> SortBy(string propertyName);
+
+		public IRedisearchQueryable<T> SortByDescending(string propertyName);
 
 		public bool Any(Expression<Func<T, bool>> expression);
 
