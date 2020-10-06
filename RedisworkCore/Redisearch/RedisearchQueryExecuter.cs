@@ -196,6 +196,7 @@ namespace RedisworkCore.Redisearch
 					object val = prop.GetValue(model);
 					string serialized = JsonConvert.SerializeObject(val);
 					doc.Set(prop.Name, serialized);
+					continue;
 				}
 
 				throw new NotSupportedException();
