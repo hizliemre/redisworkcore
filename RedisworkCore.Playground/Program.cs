@@ -10,6 +10,7 @@ namespace RedisworkCore.Playground
 	{
 		[RedisKey(0)]
 		public int Id { get; set; }
+		[RedisKey(1)]
 		public string Name { get; set; }
 		public string Lastname { get; set; }
 
@@ -28,9 +29,11 @@ namespace RedisworkCore.Playground
 		public SimpleContext(RedisContextOptions options) : base(options) { }
 	}
 
-	public class Filter
+	public class Deneme
 	{
-		public int Kimlik { get; set; }
+		public List<string> Names { get; set; }
+		public string Lastname { get; set; }
+		public double Kalinlik { get; set; }
 	}
 
 	internal class Program
@@ -88,9 +91,13 @@ namespace RedisworkCore.Playground
 
 			using (SimpleContext context = new SimpleContext(options))
 			{
-				var filter = new Filter {Kimlik = 2};
-				var a = filter.Kimlik;
-				var items = await context.Set<Person>().SortByDescending(x => x.Kalinlik).ToListAsync();
+				var filter = new Deneme
+				{
+					Lastname = "Hızlı",
+					Names = new List<string> {"Emre"},
+					Kalinlik = 1.1
+				};
+				var items = await context.Set<Person>().Where(x => x.Kalinlik == filter.Kalinlik && x.Lastname == filter.Lastname && filter.Names.Contains(x.Name)).ToListAsync();
 			}
 		}
 	}
