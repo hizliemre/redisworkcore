@@ -119,7 +119,7 @@ namespace RedisworkCore.Redisearch
 				return SerializeInternal(lambda);
 			}
 
-			if (methodCallEx.Arguments[0] is MemberExpression)
+			if (methodCallEx.Arguments[0] is MemberExpression && methodCallEx.Object != null)
 			{
 				/*
 					x => x.ModelValueTypeList.Contains(1)
@@ -136,6 +136,22 @@ namespace RedisworkCore.Redisearch
 
 				ConstantExpression constantEx = FindConstantExpression(methodCallEx.Object);
 				return SerializeBinary(methodCallEx.Arguments[0], constantEx, nodeType);
+			}
+
+			if (methodCallEx.Arguments.Count == 2 && methodCallEx.Arguments[1] is MemberExpression && methodCallEx.Object == null)
+			{
+				/*
+					???
+				*/
+
+				RedisearchNodeType nodeType = methodCallEx.Method.Name switch
+				{
+					nameof(string.Contains) => RedisearchNodeType.Contains,
+					_                       => throw new NotSupportedException()
+				};
+
+				ConstantExpression constantEx = FindConstantExpression(methodCallEx.Arguments[0]);
+				return SerializeBinary(methodCallEx.Arguments[1], constantEx, nodeType);
 			}
 
 
