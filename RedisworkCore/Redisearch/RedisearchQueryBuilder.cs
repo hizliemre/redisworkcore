@@ -429,7 +429,7 @@ namespace RedisworkCore.Redisearch
 							object value = Expression.Lambda(innerMemberEx)
 													 .Compile()
 													 .DynamicInvoke();
-							return Expression.Constant(value);
+							return Expression.Constant(value, innerMemberEx.Type);
 						}
 					}
 			}
