@@ -26,28 +26,32 @@ namespace RedisworkCore
 	public abstract class Rediset
 	{
 		internal readonly List<Document> Addeds = new List<Document>();
-		internal readonly List<Document> Updateds = new List<Document>();
 		internal readonly List<string> Deleteds = new List<string>();
+		internal readonly List<Document> Updateds = new List<Document>();
 		internal Client Client;
-		internal abstract void BuildIndex();
+
 		public List<ChangedEntry> ChangedEntries =>
-			Addeds.Select(m => new ChangedEntry {State = RediState.Add, Key = m.Id, EntityType = EntityType})
-				  .Union(Updateds.Select(m => new ChangedEntry {State = RediState.Update, Key = m.Id, EntityType = EntityType}))
-				  .Union(Deleteds.Select(m => new ChangedEntry {State = RediState.Delete, Key = m, EntityType = EntityType}))
-				  .ToList();
+			Addeds.Select(m => new ChangedEntry { State = RediState.Add, Key = m.Id, EntityType = EntityType })
+			      .Union(Updateds.Select(m => new ChangedEntry { State = RediState.Update, Key = m.Id, EntityType = EntityType }))
+			      .Union(Deleteds.Select(m => new ChangedEntry { State = RediState.Delete, Key = m, EntityType = EntityType }))
+			      .ToList();
+
 		internal abstract Type EntityType { get; }
+
+		internal abstract void BuildIndex();
 	}
 
 	public class Rediset<T> : Rediset, IRedisearchQueryable<T>, IRedisearchTake<T>
 		where T : class, new()
 	{
+		private const int _defaultTake = 1000000;
 		private readonly RedisContext _context;
 		private readonly object _locker = new object();
 		private readonly List<RedisearchSortDescriptor> _sorts = new List<RedisearchSortDescriptor>();
 		private int _skip;
-		private int _take = 1000000;
+		private int _take = _defaultTake;
 		private string _whereQuery = string.Empty;
-		internal override Type EntityType { get; }
+
 		public Rediset(RedisContext context)
 		{
 			_context = context;
@@ -55,6 +59,8 @@ namespace RedisworkCore
 			_context.Trackeds.Add(this);
 			EntityType = typeof(T);
 		}
+
+		internal override Type EntityType { get; }
 
 		public IRedisearchQueryable<T> Where(Expression<Func<T, bool>> expression)
 		{
@@ -109,9 +115,14 @@ namespace RedisworkCore
 			return this;
 		}
 
-		public Task<List<T>> ToListAsync()
+		public async Task<List<T>> ToListAsync()
 		{
-			return Client.ToListAsync<T>(_whereQuery, _sorts, _skip, _take);
+			List<T> list = await Client.ToListAsync<T>(_whereQuery, _sorts, _skip, _take);
+			_whereQuery = string.Empty;
+			_sorts.Clear();
+			_skip = 0;
+			_take = _defaultTake;
+			return list;
 		}
 
 		public Task<List<T>> TakeAsync(int count)
@@ -152,8 +163,8 @@ namespace RedisworkCore
 		public void Delete(params T[] models)
 		{
 			string[] docIds = models.Select(CreateDocument)
-									.Select(x => x.Id)
-									.ToArray();
+			                        .Select(x => x.Id)
+			                        .ToArray();
 			lock (_locker)
 			{
 				Deleteds.AddRange(docIds);
@@ -163,7 +174,7 @@ namespace RedisworkCore
 		public void Update(params T[] models)
 		{
 			Document[] docs = models.Select(CreateDocument)
-									.ToArray();
+			                        .ToArray();
 			lock (_locker)
 			{
 				Updateds.AddRange(docs);
