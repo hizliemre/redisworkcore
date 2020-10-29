@@ -20,6 +20,7 @@ namespace RedisworkCore
 	{
 		public RediState State { get; set; }
 		public string Key { get; set; }
+		public Type EntityType { get; set; }
 	}
 
 	public abstract class Rediset
@@ -29,12 +30,12 @@ namespace RedisworkCore
 		internal readonly List<string> Deleteds = new List<string>();
 		internal Client Client;
 		internal abstract void BuildIndex();
-		internal abstract Type EntityType { get; }
 		public List<ChangedEntry> ChangedEntries =>
-			Addeds.Select(m => new ChangedEntry {State = RediState.Add, Key = m.Id})
-				  .Union(Updateds.Select(m => new ChangedEntry {State = RediState.Update, Key = m.Id}))
-				  .Union(Deleteds.Select(m => new ChangedEntry {State = RediState.Delete, Key = m}))
+			Addeds.Select(m => new ChangedEntry {State = RediState.Add, Key = m.Id, EntityType = EntityType})
+				  .Union(Updateds.Select(m => new ChangedEntry {State = RediState.Update, Key = m.Id, EntityType = EntityType}))
+				  .Union(Deleteds.Select(m => new ChangedEntry {State = RediState.Delete, Key = m, EntityType = EntityType}))
 				  .ToList();
+		internal abstract Type EntityType { get; }
 	}
 
 	public class Rediset<T> : Rediset, IRedisearchQueryable<T>, IRedisearchTake<T>
@@ -47,7 +48,6 @@ namespace RedisworkCore
 		private int _take = 1000000;
 		private string _whereQuery = string.Empty;
 		internal override Type EntityType { get; }
-
 		public Rediset(RedisContext context)
 		{
 			_context = context;
