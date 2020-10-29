@@ -18,7 +18,7 @@ namespace RedisworkCore
 		private readonly RedisContextOptions _options;
 		private readonly Dictionary<Type, Rediset> _sets = new Dictionary<Type, Rediset>();
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-		internal readonly List<Rediset> Trackeds = new List<Rediset>();
+		public readonly List<Rediset> Trackeds = new List<Rediset>();
 		private ConnectionMultiplexer _redis;
 		internal IDatabase Database;
 		public volatile bool TransactionStarted;
