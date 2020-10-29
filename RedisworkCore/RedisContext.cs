@@ -18,7 +18,8 @@ namespace RedisworkCore
 		private readonly RedisContextOptions _options;
 		private readonly Dictionary<Type, Rediset> _sets = new Dictionary<Type, Rediset>();
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-		public readonly List<Rediset> Trackeds = new List<Rediset>();
+		internal readonly List<Rediset> Trackeds = new List<Rediset>();
+		public List<ChangedEntry> ChangedEntries => _sets.Values.SelectMany(m => m.ChangedEntries).ToList();
 		private ConnectionMultiplexer _redis;
 		internal IDatabase Database;
 		public volatile bool TransactionStarted;
@@ -58,11 +59,13 @@ namespace RedisworkCore
 					await Database.ExecuteAsync("FT.DEL", set.Client.IndexName, docId, "DD");
 
 				set.Deleteds.Clear();
+				var addOrUpdateds = set.Addeds.Union(set.Updateds).ToArray();
 				await set.Client.AddDocumentsAsync(new AddOptions
 				{
 					ReplacePolicy = AddOptions.ReplacementPolicy.Full,
-				}, set.AddOrUpdateds.ToArray());
-				set.AddOrUpdateds.Clear();
+				}, addOrUpdateds);
+				set.Addeds.Clear();
+				set.Updateds.Clear();
 			}
 		}
 
@@ -100,32 +103,32 @@ namespace RedisworkCore
 		{
 			Type type = model.GetType();
 			var props = type.GetProperties()
-			                .Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
-			                .Select(x => new
-			                {
-				                Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
-				                           ?.Order
-			                })
-			                .OrderBy(x => x.Order)
-			                .ToList();
+							.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+							.Select(x => new
+							 {
+								 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+										   ?.Order
+							 })
+							.OrderBy(x => x.Order)
+							.ToList();
 			if (!props.Any()) throw new InvalidOperationException($"No redis key for this model {type.Name}");
 			object[] values = props.Select(x => x.Prop.GetValue(model))
-			                       .ToArray();
+								   .ToArray();
 			return GenerateKey(model.GetType(), values);
 		}
 
 		internal static string GenerateKey(Type type, params object[] keyValues)
 		{
 			string[] keyNames = type.GetProperties()
-			                        .Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
-			                        .Select(x => new
-			                        {
-				                        Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
-				                                   ?.Order
-			                        })
-			                        .OrderBy(x => x.Order)
-			                        .Select(x => x.Prop.Name)
-			                        .ToArray();
+									.Where(x => x.IsDefined(typeof(RedisKeyAttribute)))
+									.Select(x => new
+									 {
+										 Prop = x, x.GetCustomAttribute<RedisKeyAttribute>()
+												   ?.Order
+									 })
+									.OrderBy(x => x.Order)
+									.Select(x => x.Prop.Name)
+									.ToArray();
 
 			if (keyNames.Length != keyValues.Length) throw new InvalidOperationException($"You should enter all keys for type {type.Name}");
 
@@ -154,7 +157,7 @@ namespace RedisworkCore
 		private void Connect()
 		{
 			RetryPolicy<bool> policy = Policy.HandleResult<bool>(connected => !connected)
-			                                 .WaitAndRetry(10, r => TimeSpan.FromMilliseconds(100));
+											 .WaitAndRetry(10, r => TimeSpan.FromMilliseconds(100));
 
 			ConfigurationOptions configure = Configure(_options.HostAndPort);
 
@@ -183,10 +186,10 @@ namespace RedisworkCore
 		private void SetContext(bool buildIndex = false)
 		{
 			IEnumerable<PropertyInfo> props = GetType()
-			                                  .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-			                                  .Where(x => x.PropertyType.IsClass &&
-			                                              x.PropertyType.IsGenericType &&
-			                                              x.PropertyType.GetGenericTypeDefinition() == typeof(Rediset<>));
+											 .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+											 .Where(x => x.PropertyType.IsClass &&
+														 x.PropertyType.IsGenericType &&
+														 x.PropertyType.GetGenericTypeDefinition() == typeof(Rediset<>));
 
 
 			foreach (PropertyInfo prop in props)
