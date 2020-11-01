@@ -186,9 +186,9 @@ namespace RedisworkCore
 			return Client.Find<T>(keys);
 		}
 
-		public Task<T> Find(string key)
+		public Task<T> FindByDocId(string docId)
 		{
-			return Client.Find<T>(key);
+			return Client.FindByDocId<T>(docId);
 		}
 
 		public bool All(Expression<Func<T, bool>> expression)

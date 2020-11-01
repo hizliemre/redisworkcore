@@ -25,9 +25,9 @@ namespace RedisworkCore.Redisearch
 			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
 		}
 
-		internal static async Task<T> Find<T>(this Client client, string key) where T : class
+		internal static async Task<T> FindByDocId<T>(this Client client, string docId) where T : class
 		{
-			Document retObj = await client.GetDocumentAsync(key);
+			Document retObj = await client.GetDocumentAsync(docId);
 			if (retObj is null) return null;
 			string serialized = JsonConvert.SerializeObject(retObj.GetProperties());
 			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
