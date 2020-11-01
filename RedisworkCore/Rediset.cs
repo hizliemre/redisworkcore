@@ -31,10 +31,10 @@ namespace RedisworkCore
 		internal Client Client;
 
 		public List<ChangedEntry> ChangedEntries =>
-			Addeds.Select(m => new ChangedEntry { State = RediState.Add, Key = m.Id, EntityType = EntityType })
-			      .Union(Updateds.Select(m => new ChangedEntry { State = RediState.Update, Key = m.Id, EntityType = EntityType }))
-			      .Union(Deleteds.Select(m => new ChangedEntry { State = RediState.Delete, Key = m, EntityType = EntityType }))
-			      .ToList();
+			Addeds.Select(m => new ChangedEntry {State = RediState.Add, Key = m.Id, EntityType = EntityType})
+				  .Union(Updateds.Select(m => new ChangedEntry {State = RediState.Update, Key = m.Id, EntityType = EntityType}))
+				  .Union(Deleteds.Select(m => new ChangedEntry {State = RediState.Delete, Key = m, EntityType = EntityType}))
+				  .ToList();
 
 		internal abstract Type EntityType { get; }
 
@@ -163,8 +163,8 @@ namespace RedisworkCore
 		public void Delete(params T[] models)
 		{
 			string[] docIds = models.Select(CreateDocument)
-			                        .Select(x => x.Id)
-			                        .ToArray();
+									.Select(x => x.Id)
+									.ToArray();
 			lock (_locker)
 			{
 				Deleteds.AddRange(docIds);
@@ -174,7 +174,7 @@ namespace RedisworkCore
 		public void Update(params T[] models)
 		{
 			Document[] docs = models.Select(CreateDocument)
-			                        .ToArray();
+									.ToArray();
 			lock (_locker)
 			{
 				Updateds.AddRange(docs);
@@ -184,6 +184,11 @@ namespace RedisworkCore
 		public Task<T> Find(params object[] keys)
 		{
 			return Client.Find<T>(keys);
+		}
+
+		public Task<T> Find(string key)
+		{
+			return Client.Find<T>(key);
 		}
 
 		public bool All(Expression<Func<T, bool>> expression)

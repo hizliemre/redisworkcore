@@ -25,6 +25,14 @@ namespace RedisworkCore.Redisearch
 			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
 		}
 
+		internal static async Task<T> Find<T>(this Client client, string key) where T : class
+		{
+			Document retObj = await client.GetDocumentAsync(key);
+			if (retObj is null) return null;
+			string serialized = JsonConvert.SerializeObject(retObj.GetProperties());
+			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
+		}
+
 		internal static string Where<T>(this Expression<Func<T, bool>> expression, bool not = false)
 		{
 			string query = expression.ToRedisearchQuery(not);
