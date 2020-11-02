@@ -16,21 +16,23 @@ namespace RedisworkCore.Redisearch
 {
 	public static class RedisearchQueryExecuter
 	{
-		internal static async Task<T> Find<T>(this Client client, params object[] keys) where T : class
+		internal static async Task<T> Find<T>(this Client client, params object[] keys) where T : class, new()
 		{
 			string key = RedisContext.GenerateKey(typeof(T), keys);
 			Document retObj = await client.GetDocumentAsync(key);
 			if (retObj is null) return null;
-			string serialized = JsonConvert.SerializeObject(retObj.GetProperties());
-			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
+			PropertyInfo[] props = Helpers.GetModelProperties<T>().Where(x => x.GetSetMethod() != null).ToArray();
+			T result = SerializeProperties<T>(props, retObj.GetProperties().ToList());
+			return result;
 		}
 
-		internal static async Task<T> FindByDocId<T>(this Client client, string docId) where T : class
+		internal static async Task<T> FindByDocId<T>(this Client client, string docId) where T : class, new()
 		{
 			Document retObj = await client.GetDocumentAsync(docId);
 			if (retObj is null) return null;
-			string serialized = JsonConvert.SerializeObject(retObj.GetProperties());
-			return JsonConvert.DeserializeObject<T>(serialized, RedisearchSerializerSettings.SerializerSettings);
+			PropertyInfo[] props = Helpers.GetModelProperties<T>().Where(x => x.GetSetMethod() != null).ToArray();
+			T result = SerializeProperties<T>(props, retObj.GetProperties().ToList());
+			return result;
 		}
 
 		internal static string Where<T>(this Expression<Func<T, bool>> expression, bool not = false)
